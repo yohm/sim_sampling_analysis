@@ -13,9 +13,10 @@ from scipy.stats import binom
 # In[ ]:
 
 
-h = np.linspace(0.0, 1.0, num=500)[1::] # exclude the first because it can diverge
+h = np.linspace(0.0, 1.0, num=501)[1::] # exclude the first because it can diverge
 dh = h[1] - h[0]
-kappa = np.arange(0,300)
+h = h - dh/2
+kappa = np.arange(1,300)
 k = np.arange(0,200)
 
 
@@ -24,11 +25,10 @@ k = np.arange(0,200)
 
 def _rho(alpha=1.0, x_0=0.3):
     # Weibull distribution
-    return alpha/x_0*(h/x_0)**(alpha-1) * np.exp( -(h/x_0)**alpha )
-    
+    ro = alpha/x_0*(h/x_0)**(alpha-1) * np.exp( -(h/x_0)**alpha )
+    return ro / (np.sum(ro)*dh)   # normalize to reduce numerical error
+
 rho = _rho()
-plt.plot(h, rho)
-dh = h[1]-h[0]
 np.sum(rho)*dh
 
 
@@ -242,11 +242,12 @@ def _c_k():
     nh = h.shape[0]
     nk = k.shape[0]
     nkappa = kappa.shape[0]
-    #_P_k = P_k.reshape( (nk,1,1) )
     _rho_h = rho.reshape( (1,nh,1) )
     _p_kappa = p_kappa.reshape( (1,1,nkappa) )
     _c_h = c_h.reshape( (1,nh,1) )
-    _c_o_kappa = 0.1
+    #_c_o_kappa = 0.1
+    # tentatively assume c_o(kappa) = 0.1 * kappa^{-1}
+    _c_o_kappa = 0.1 / kappa
     return 1.0 / P_k * np.sum( g * _rho_h * _p_kappa * _c_h * _c_o_kappa, axis=(1,2) ) * dh
 
 c_k = _c_k()
@@ -257,6 +258,33 @@ plt.plot(k, c_k)
 
 #c_h_kappa = _c_h_kappa()
 #plt.plot(h, c_h_kappa[:,150])
+
+
+# In[ ]:
+
+
+# Pearson's correlation coefficient, but something is wrong...
+
+def _pearson():
+    _kappa_mean = np.sum( kappa * p_kappa )
+    _r_bar = r_bar()
+    _kappa_kappa_prime = 150*149    # [TODO] tentative implementation: degree correlation in the original network
+    _kappa_kappa_mean = np.sum( kappa * (kappa-1) * p_kappa )
+    _r2_bar = np.sum( r_bar_h * r_bar_h * rho ) * dh
+    print(_r2_bar, _r_bar*_r_bar)
+    _numerator = _kappa_mean * _r_bar + _kappa_kappa_prime * _r2_bar - _kappa_mean * _kappa_mean * _r_bar * _r_bar
+    #_numerator = _kappa_kappa_prime * _r2_bar - _kappa_mean * _kappa_mean * _r_bar * _r_bar
+    _denominator = _kappa_mean * _r_bar + _kappa_kappa_mean * _r2_bar - _kappa_mean * _kappa_mean * _r_bar * _r_bar
+    return (_numerator, _denominator)
+
+
+_pearson()
+
+
+# In[ ]:
+
+
+
 
 
 # In[ ]:
