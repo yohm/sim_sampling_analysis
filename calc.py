@@ -13,7 +13,8 @@ from scipy.stats import binom
 # In[ ]:
 
 
-h = np.linspace(0.0, 1.0, num=1000)[1::] # exclude the first because it can diverge
+h = np.linspace(0.0, 1.0, num=500)[1::] # exclude the first because it can diverge
+dh = h[1] - h[0]
 kappa = np.arange(0,300)
 k = np.arange(0,200)
 
@@ -21,25 +22,29 @@ k = np.arange(0,200)
 # In[ ]:
 
 
-def rho(h, alpha=1.0, x_0=0.2):
+def _rho(alpha=1.0, x_0=0.3):
     # Weibull distribution
     return alpha/x_0*(h/x_0)**(alpha-1) * np.exp( -(h/x_0)**alpha )
     
-plt.plot(h, rho(h))
+rho = _rho()
+plt.plot(h, rho)
 dh = h[1]-h[0]
-np.sum(rho(h))*dh
+np.sum(rho)*dh
 
 
 # In[ ]:
 
 
-def p_kappa(x):
+def _p_kappa():
+    # delta function
+    return np.where(kappa == 150, 1, 0)
     # normal distribution (for now)
-    mean = 150.0
-    sigma = 1.0
-    return 1.0/math.sqrt(2.0*math.pi*sigma**2) * np.exp( -(x-mean)**2/(2.0*sigma**2) )
+    #mean = 150.0
+    #sigma = 1.0
+    #return 1.0/math.sqrt(2.0*math.pi*sigma**2) * np.exp( -(kappa-mean)**2/(2.0*sigma**2) )
 
-plt.plot(kappa,p_kappa(kappa))
+p_kappa = _p_kappa()
+plt.plot(kappa,p_kappa)
 
 
 # In[ ]:
@@ -48,33 +53,35 @@ plt.plot(kappa,p_kappa(kappa))
 def r(h1, h2):
     # generalized mean
     return np.minimum(h1,h2)
+    #return np.maximum(h1,h2)
+    #return np.sqrt(h1*h2)
 
 
 # In[ ]:
 
 
-def r_bar_h(h):
+def _r_bar_h():
     # sum_{h'} rho(h') r(h,h')
-    h_prime = np.copy(h)
-    dh = h_prime[1] - h_prime[0]
-    h_prime = h_prime.reshape( [1,h_prime.shape[0]] )
+    h_prime = np.copy(h).reshape([1,h.shape[0]])
+    h_ = h.reshape( [h.shape[0],1] )
     #print(h,h_prime)
-    rhh = r(h.reshape([h.shape[0],1]), h_prime)
-    dr = rhh*rho(h)*dh
+    rhh = r(h_, h_prime)
+    #print(rhh)
+    dr = rhh*rho.reshape([1,h.shape[0]])*dh
     #print(dr)
     return np.sum(dr,axis=1)
     
-plt.plot(h, r_bar_h(h))
+r_bar_h = _r_bar_h()
+print(r_bar_h.shape)
+plt.plot(h, r_bar_h)
 
 
 # In[ ]:
 
 
 def r_bar():
-    x = np.copy(h)
-    dx = x[1]-x[0]
-    y = r_bar_h(x) * rho(x)
-    return np.sum(y)*dx
+    y = r_bar_h * rho * dh
+    return np.sum(y)
 
 r_bar()
 
@@ -82,12 +89,14 @@ r_bar()
 # In[ ]:
 
 
-def propagator(k, h, kappa):
+def _propagator():
     # g(k|h,kappa) = \binom(kappa, k) r(h)^k ( 1-r(h))^{kappa-k}
-    p = r_bar_h(h)
-    _p = p.reshape([p.shape[0],1])
+    p = r_bar_h
+    _p = p.reshape([1,p.shape[0],1])
     #print(p, _kappa)
-    b = binom(kappa, _p)
+    _kappa = kappa.reshape([1,1,kappa.shape[0]])
+    b = binom(_kappa, _p)
+    #print(b.shape)
     _k = k.reshape([k.shape[0],1,1])
     #print(_k)
     return b.pmf(_k)
@@ -98,47 +107,160 @@ def propagator(k, h, kappa):
 #_h = np.linspace(0.0, 1.0, num=100)[1::]
 #kappa = np.array([100,110,120,130,140])
 #_kappa = np.arange(0,150)
-g = propagator(k, h, kappa)
+g = _propagator()
 print(g.shape)
-#plt.plot(k, g[:,50,100])
+plt.plot(k, g[:,300,150])
 #plt.plot(h, g[20,:,100])
-plt.plot(kappa, g[30,50,:])
+#plt.plot(kappa, g[30,50,:])
 
 
 # In[ ]:
 
 
-def k_bar_h(h):
-    kappa_mean = np.sum( p_kappa(kappa) * kappa )
+def _k_bar_h():
+    kappa_mean = np.sum( p_kappa * kappa )
     #print(kappa_mean)
-    return kappa_mean * r_bar_h(h)
+    return kappa_mean * r_bar_h
 
-plt.plot(h, k_bar_h(h))
+k_bar_h = _k_bar_h()
+plt.plot(h, k_bar_h)
 
 
 # In[ ]:
 
 
-def P_k(k):
-    dh = h[1] - h[0]
-    g = propagator(k,h,kappa)
-    g_rho = g * rho(h).reshape([1,h.shape[0],1])
-    gh = np.sum(g_rho, axis = 1) * dh
-    gh_Pkappa = gh * p_kappa(kappa).reshape([1, kappa.shape[0]])
-    return np.sum(gh_Pkappa, axis = 1)
+def _P_k():
+    _g = g * rho.reshape([1,h.shape[0],1]) * p_kappa.reshape([1,1,kappa.shape[0]]) * dh
+    return np.sum(_g, axis=(1,2))
+    #gh = np.sum(g_rho, axis = 1) * dh
+    #gh_Pkappa = gh * p_kappa.reshape([1, kappa.shape[0]])
+    #return np.sum(gh_Pkappa, axis = 1)
 
+P_k = _P_k()
 plt.yscale("log")
-plt.ylim(1.0e-4,1)
-plt.plot(k, P_k(k))
-P_k(k)[0:10]
+plt.ylim(1.0e-4,1.0e-1)
+plt.xlim(0,50)
+plt.plot(k, P_k)
+P_k[0:10]
 
 
 # In[ ]:
 
 
-n=150
-p = 0.4
-b = binom(n,p)
-x = np.arange(binom.ppf(0.01, n, p), binom.ppf(0.99, n, p))
-plt.plot(x, b.pmf(x))
+# degree correlation
+
+def _kappa_nn_bar_kappa():
+    # \bar{\kappa}_{nn}(\kappa) = \sum_{\kappa'} \kappa' p_o(\kappa' | \kappa)
+    # tentatively assume P(kappa'|kappa) = P(kappa)
+    kappa_mean = np.sum(kappa * p_kappa)
+    return np.full(kappa.shape, kappa_mean)
+
+kappa_nn_bar_kappa = _kappa_nn_bar_kappa()
+plt.plot(kappa, kappa_nn_bar_kappa)
+
+
+# In[ ]:
+
+
+def _r_nn_h():
+    # h, h_prime are axis=0,1, respectively.
+    nh = h.shape[0]
+    h_prime = np.copy(h).reshape([1,nh])
+    rho_h_prime = rho.reshape([1,nh])
+    r_bar_h_prime = r_bar_h.reshape([1,nh])
+    r_bar_h_ = r_bar_h.reshape( [nh,1] )
+    h_ = h.reshape( [nh,1] )
+    x = r( h_, h_prime ) * rho_h_prime * r_bar_h_prime / r_bar_h_
+    return np.sum( x, axis=1 ) * dh
+    
+r_nn_h = _r_nn_h()
+plt.plot(h, r_nn_h)
+plt.plot(h, r_bar_h)
+
+
+# In[ ]:
+
+
+def _k_nn_bar_k():
+    # k, h, kappa are axis=0,1,2, respectively
+    nk = k.shape[0]
+    nh = h.shape[0]
+    nkappa = kappa.shape[0]
+    p_k_ = P_k.reshape( [nk,1,1,] )
+    rho_h_ = rho.reshape( [1,nh,1] )
+    p_kappa_ = p_kappa.reshape( [1,1,nkappa] )
+    r_nn_h_ = r_nn_h.reshape( [1,nh,1] )
+    kappa_nn_bar_kappa_ = kappa_nn_bar_kappa.reshape( [1,1,nkappa] )
+    #g_p_k_ = np.where( p_k_ > 0.0, g/p_k_, 0.0)
+    return 1 + np.sum( g / p_k_ * rho_h_ * p_kappa_ * r_nn_h_ * (kappa_nn_bar_kappa_ -1), axis=(1,2) ) * dh
+
+k_nn_bar_k = _k_nn_bar_k()
+print(k_nn_bar_k)
+plt.xscale("log")
+plt.xlim(1.0e0, 1.0e2)
+plt.plot(k, k_nn_bar_k)
+
+
+# In[ ]:
+
+
+# clustering coefficient
+
+def _p_hprime_given_h():
+    # h,h' are axis-0,1
+    # p(h'|h) = r(h',h) rho(h') / r_bar(h)
+    nh = h.shape[0]
+    h_ = h.reshape( (nh,1) )
+    h_prime = h.reshape( (1,nh) )
+    rho_hprime = rho.reshape( (1,nh) )
+    rbar_h = r_bar_h.reshape( (nh,1) )
+    return r(h_, h_prime) * rho_hprime / rbar_h
+
+p_hprime_given_h = _p_hprime_given_h()
+#plt.plot(h, p_hprime_given_h[:,100])
+#h_bar_given_h = np.sum( p_hprime_given_h * h.reshape( (1,h.shape[0]) ), axis=1) * dh
+#plt.plot(h, h_bar_given_h)
+
+def _c_h():
+    # h, h', h'' are axis-0,1,2, respectively
+    # \sum_{h', h''} = r(h', h'') * p(h'|h) * p(h''|h)
+    nh = h.shape[0]
+    h_ = h.reshape( (nh,1,1) )
+    h_prime = h.reshape( (1,nh,1) )
+    h_prime2 = h.reshape( (1,1,nh) )
+    p_hprime_given_h_ = p_hprime_given_h.reshape( (nh,nh,1) )
+    p_hprime2_given_h_ = p_hprime_given_h.reshape( (nh,1,nh) )
+    r_ = r(h_prime, h_prime2).reshape( (1,nh,nh) )
+    return np.sum( r_ * p_hprime_given_h_ * p_hprime2_given_h_, axis=(1,2) ) * dh * dh
+
+c_h = _c_h()
+#plt.plot(h, c_h)
+
+def _c_k():
+    # k, h, kappa are axis-0,1,2, respectively
+    # 1/P(k) * \sum_{h,\kappa} g(k|h,\kappa) rho(h) P(\kappa) c_h c_o(\kappa)
+    nh = h.shape[0]
+    nk = k.shape[0]
+    nkappa = kappa.shape[0]
+    #_P_k = P_k.reshape( (nk,1,1) )
+    _rho_h = rho.reshape( (1,nh,1) )
+    _p_kappa = p_kappa.reshape( (1,1,nkappa) )
+    _c_h = c_h.reshape( (1,nh,1) )
+    _c_o_kappa = 0.1
+    return 1.0 / P_k * np.sum( g * _rho_h * _p_kappa * _c_h * _c_o_kappa, axis=(1,2) ) * dh
+
+c_k = _c_k()
+plt.yscale("log")
+plt.xscale("log")
+plt.xlim(1,100)
+plt.plot(k, c_k)
+
+#c_h_kappa = _c_h_kappa()
+#plt.plot(h, c_h_kappa[:,150])
+
+
+# In[ ]:
+
+
+
 
