@@ -147,6 +147,25 @@ P_k[0:10]
 # In[ ]:
 
 
+# checking  <k> = \sum_{k} k P(k) = <kappa> * \bar{r}
+
+(np.sum(k * P_k), r_bar() * np.sum(kappa*p_kappa))
+
+
+# In[ ]:
+
+
+# <k^2> = \sum_{k} k^2 P(k)
+#   = <kappa>rbar + <kappa(kappa-1)> \sum_{h} rbar(h)^2 rho(h)
+
+_x = np.sum(k * k * P_k)
+_y = np.sum(kappa * p_kappa) * r_bar() + np.sum(kappa*(kappa-1)*p_kappa) * np.sum(r_bar_h*r_bar_h*rho)*dh
+(_x, _y)
+
+
+# In[ ]:
+
+
 # degree correlation
 
 def _kappa_nn_bar_kappa():
@@ -186,19 +205,30 @@ def _k_nn_bar_k():
     nk = k.shape[0]
     nh = h.shape[0]
     nkappa = kappa.shape[0]
-    p_k_ = P_k.reshape( [nk,1,1,] )
+    P_k_ = P_k[ P_k > 0 ]
+    p_k_ = P_k_.reshape( [P_k_.shape[0],1,1,] )
+    _g = g[P_k > 0,:,:]
+    print(p_k_.shape)
     rho_h_ = rho.reshape( [1,nh,1] )
     p_kappa_ = p_kappa.reshape( [1,1,nkappa] )
     r_nn_h_ = r_nn_h.reshape( [1,nh,1] )
     kappa_nn_bar_kappa_ = kappa_nn_bar_kappa.reshape( [1,1,nkappa] )
     #g_p_k_ = np.where( p_k_ > 0.0, g/p_k_, 0.0)
-    return 1 + np.sum( g / p_k_ * rho_h_ * p_kappa_ * r_nn_h_ * (kappa_nn_bar_kappa_ -1), axis=(1,2) ) * dh
+    return 1 + np.sum( _g / p_k_ * rho_h_ * p_kappa_ * r_nn_h_ * (kappa_nn_bar_kappa_-1), axis=(1,2) ) * dh
 
 k_nn_bar_k = _k_nn_bar_k()
-print(k_nn_bar_k)
+#print(k_nn_bar_k)
 plt.xscale("log")
 plt.xlim(1.0e0, 1.0e2)
-plt.plot(k, k_nn_bar_k)
+plt.plot(k[P_k > 0], k_nn_bar_k)
+
+
+# In[ ]:
+
+
+np.sum(P_k[P_k > 0] * k_nn_bar_k)
+np.sum(k * P_k)
+#P_k[ P_k > 0 ].shape
 
 
 # In[ ]:
@@ -275,6 +305,7 @@ def _pearson():
     _numerator = _kappa_mean * _r_bar + _kappa_kappa_prime * _r2_bar - _kappa_mean * _kappa_mean * _r_bar * _r_bar
     #_numerator = _kappa_kappa_prime * _r2_bar - _kappa_mean * _kappa_mean * _r_bar * _r_bar
     _denominator = _kappa_mean * _r_bar + _kappa_kappa_mean * _r2_bar - _kappa_mean * _kappa_mean * _r_bar * _r_bar
+    print(_kappa_mean * _r_bar + _kappa_kappa_mean * _r2_bar, (_kappa_mean * _r_bar)**2 )
     return (_numerator, _denominator)
 
 
