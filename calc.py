@@ -29,7 +29,8 @@ def _rho(alpha=1.0, x_0=0.3):
     return ro / (np.sum(ro)*dh)   # normalize to reduce numerical error
 
 rho = _rho()
-np.sum(rho)*dh
+print(np.sum(rho)*dh)
+plt.plot(h, rho)
 
 
 # In[ ]:
@@ -37,10 +38,16 @@ np.sum(rho)*dh
 
 def _p_kappa():
     # delta function
-    return np.where(kappa == 150, 1, 0)
+    #return np.where(kappa == 150, 1, 0)
+    # binomial distribution
+    _n = 5000
+    _p = 0.03
+    b = binom(_n, _p)
+    pmf = b.pmf(kappa)
+    return pmf / np.sum(pmf)   # normalize to reduce error
     # normal distribution (for now)
     #mean = 150.0
-    #sigma = 1.0
+    #sigma = 30.0
     #return 1.0/math.sqrt(2.0*math.pi*sigma**2) * np.exp( -(kappa-mean)**2/(2.0*sigma**2) )
 
 p_kappa = _p_kappa()
@@ -208,13 +215,14 @@ def _k_nn_bar_k():
     P_k_ = P_k[ P_k > 0 ]
     p_k_ = P_k_.reshape( [P_k_.shape[0],1,1,] )
     _g = g[P_k > 0,:,:]
-    print(p_k_.shape)
+    #print(p_k_.shape)
     rho_h_ = rho.reshape( [1,nh,1] )
     p_kappa_ = p_kappa.reshape( [1,1,nkappa] )
     r_nn_h_ = r_nn_h.reshape( [1,nh,1] )
     kappa_nn_bar_kappa_ = kappa_nn_bar_kappa.reshape( [1,1,nkappa] )
     #g_p_k_ = np.where( p_k_ > 0.0, g/p_k_, 0.0)
-    return 1 + np.sum( _g / p_k_ * rho_h_ * p_kappa_ * r_nn_h_ * (kappa_nn_bar_kappa_-1), axis=(1,2) ) * dh
+    return 1 + np.sum( _g / p_k_ * rho_h_ * p_kappa_ * r_nn_h_ * (kappa_nn_bar_kappa_), axis=(1,2) ) * dh
+    #return 1 + np.sum( _g / p_k_ * rho_h_ * p_kappa_ * r_nn_h_ * (kappa_nn_bar_kappa_-1), axis=(1,2) ) * dh
 
 k_nn_bar_k = _k_nn_bar_k()
 #print(k_nn_bar_k)
@@ -277,13 +285,13 @@ def _c_k():
     _c_h = c_h.reshape( (1,nh,1) )
     #_c_o_kappa = 0.1
     # tentatively assume c_o(kappa) = 0.1 * kappa^{-1}
-    _c_o_kappa = 0.1 / kappa
+    # _c_o_kappa = 0.1 / (kappa**2)
+    _c_o_kappa = 0.03
     return 1.0 / P_k * np.sum( g * _rho_h * _p_kappa * _c_h * _c_o_kappa, axis=(1,2) ) * dh
 
 c_k = _c_k()
 plt.yscale("log")
 plt.xscale("log")
-plt.xlim(1,100)
 plt.plot(k, c_k)
 
 #c_h_kappa = _c_h_kappa()
@@ -316,6 +324,61 @@ _pearson()
 
 
 
+
+
+# In[ ]:
+
+
+# comparison with simulation
+def _compare_pk():
+    path = "/Users/murase/work/oacis/public/Result_development/5bcd5bb6d12ac6187c093163/5bd00a02d12ac61729031987/5bd00bd1d12ac617290319fe/degree_distribution_ave.dat"
+    d = np.loadtxt(path)
+    plt.yscale("log")
+    plt.ylim(1.0e-4,4.0e-2)
+    plt.xlim(0,70)
+    plt.xlabel("k")
+    plt.ylabel("P(k)")
+    plt.plot(k, P_k )
+    plt.plot(d[:,0], d[:,1]/5000)
+    plt.savefig("pk_sim.pdf")
+    
+_compare_pk()
+    
+    
+
+
+# In[ ]:
+
+
+def _compare_knn():
+    path = "/Users/murase/work/oacis/public/Result_development/5bcd5bb6d12ac6187c093163/5bd00a02d12ac61729031987/5bd00bd1d12ac617290319fe/neighbor_degree_correlation_ave.dat"
+    d = np.loadtxt(path)
+    plt.xscale("log")
+    plt.xlim(1.0e0, 1.0e2)
+    plt.xlabel("k")
+    plt.ylabel("k_nn(k)")
+    plt.plot(k[P_k > 0], k_nn_bar_k)
+    plt.plot(d[:,0], d[:,1])
+    plt.savefig("knn_sim.pdf")
+    
+_compare_knn()
+
+
+# In[ ]:
+
+
+def _compare_ck():
+    path = "/Users/murase/work/oacis/public/Result_development/5bcd5bb6d12ac6187c093163/5bd00a02d12ac61729031987/5bd00bd1d12ac617290319fe/cc_degree_correlation_ave.dat"
+    d = np.loadtxt(path)
+    plt.xscale("log")
+    plt.yscale("log")
+    plt.xlabel("k")
+    plt.ylabel("c(k)")
+    plt.plot(k[2:], c_k[2:])
+    plt.plot(d[:,0], d[:,1])
+    plt.savefig("ck_sim.pdf")
+    
+_compare_ck()
 
 
 # In[ ]:
