@@ -59,8 +59,8 @@ plt.plot(kappa,p_kappa)
 
 def r(h1, h2):
     # generalized mean
-    return np.minimum(h1,h2)
-    #return np.maximum(h1,h2)
+    #return np.minimum(h1,h2)
+    return np.maximum(h1,h2)
     #return np.sqrt(h1*h2)
 
 
@@ -306,14 +306,13 @@ plt.plot(k, c_k)
 def _pearson():
     _kappa_mean = np.sum( kappa * p_kappa )
     _r_bar = r_bar()
-    _kappa_kappa_prime = 150*149    # [TODO] tentative implementation: degree correlation in the original network
+    _kappa_kappa_prime = _kappa_mean * (_kappa_mean-1)    # [TODO] assuming uncorrelated degrees in the original network
     _kappa_kappa_mean = np.sum( kappa * (kappa-1) * p_kappa )
     _r2_bar = np.sum( r_bar_h * r_bar_h * rho ) * dh
-    print(_r2_bar, _r_bar*_r_bar)
-    _numerator = _kappa_mean * _r_bar + _kappa_kappa_prime * _r2_bar - _kappa_mean * _kappa_mean * _r_bar * _r_bar
-    #_numerator = _kappa_kappa_prime * _r2_bar - _kappa_mean * _kappa_mean * _r_bar * _r_bar
-    _denominator = _kappa_mean * _r_bar + _kappa_kappa_mean * _r2_bar - _kappa_mean * _kappa_mean * _r_bar * _r_bar
-    print(_kappa_mean * _r_bar + _kappa_kappa_mean * _r2_bar, (_kappa_mean * _r_bar)**2 )
+    _k_mean = _kappa_mean * _r_bar
+    print(_kappa_kappa_prime * _r2_bar , _k_mean * _k_mean)
+    _numerator = _k_mean + _kappa_kappa_prime * _r2_bar - _k_mean * _k_mean
+    _denominator = _k_mean + _kappa_kappa_mean * _r2_bar - _k_mean * _k_mean
     return (_numerator, _denominator)
 
 
@@ -379,6 +378,16 @@ def _compare_ck():
     plt.savefig("ck_sim.pdf")
     
 _compare_ck()
+
+
+# In[ ]:
+
+
+def _compare_average_c():
+    return np.sum( c_k[2:]*P_k[2:])
+
+_compare_average_c()
+# numerical result : 0.006672 (http://localhost:3000/parameter_sets/5bd00a02d12ac61729031987?plot_type=line&x_axis=N&y_axis=.ClusteringCoefficient&series=&irrelevants=#!tab-plot)
 
 
 # In[ ]:
