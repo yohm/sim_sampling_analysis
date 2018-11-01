@@ -8,6 +8,7 @@ numpy = "*"
 jupyter = "*"
 matplotlib = "*"
 scipy = "*"
+networkx = "*"
 
 [dev-packages]
 
