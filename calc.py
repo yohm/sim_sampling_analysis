@@ -179,7 +179,7 @@ def _kappa_nn_bar_kappa():
     # \bar{\kappa}_{nn}(\kappa) = \sum_{\kappa'} \kappa' p_o(\kappa' | \kappa)
     # tentatively assume P(kappa'|kappa) = P(kappa)
     kappa_mean = np.sum(kappa * p_kappa)
-    return np.full(kappa.shape, kappa_mean)
+    return np.full(kappa.shape, kappa_mean + 1)
 
 kappa_nn_bar_kappa = _kappa_nn_bar_kappa()
 plt.plot(kappa, kappa_nn_bar_kappa)
@@ -200,8 +200,9 @@ def _r_nn_h():
     return np.sum( x, axis=1 ) * dh
     
 r_nn_h = _r_nn_h()
-plt.plot(h, r_nn_h)
-plt.plot(h, r_bar_h)
+plt.plot(h, r_nn_h, label="r_nn(h)")
+plt.plot(h, r_bar_h, label="r(h)")
+plt.legend()
 
 
 # In[ ]:
@@ -221,8 +222,8 @@ def _k_nn_bar_k():
     r_nn_h_ = r_nn_h.reshape( [1,nh,1] )
     kappa_nn_bar_kappa_ = kappa_nn_bar_kappa.reshape( [1,1,nkappa] )
     #g_p_k_ = np.where( p_k_ > 0.0, g/p_k_, 0.0)
-    return 1 + np.sum( _g / p_k_ * rho_h_ * p_kappa_ * r_nn_h_ * (kappa_nn_bar_kappa_), axis=(1,2) ) * dh
-    # return 1 + np.sum( _g / p_k_ * rho_h_ * p_kappa_ * r_nn_h_ * (kappa_nn_bar_kappa_-1), axis=(1,2) ) * dh
+    #return 1 + np.sum( _g / p_k_ * rho_h_ * p_kappa_ * r_nn_h_ * (kappa_nn_bar_kappa_), axis=(1,2) ) * dh
+    return 1 + np.sum( _g / p_k_ * rho_h_ * p_kappa_ * r_nn_h_ * (kappa_nn_bar_kappa_-1), axis=(1,2) ) * dh * 5000.0/4999.0
 
 k_nn_bar_k = _k_nn_bar_k()
 #print(k_nn_bar_k)
