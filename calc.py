@@ -221,9 +221,7 @@ def _k_nn_bar_k():
     p_kappa_ = p_kappa.reshape( [1,1,nkappa] )
     r_nn_h_ = r_nn_h.reshape( [1,nh,1] )
     kappa_nn_bar_kappa_ = kappa_nn_bar_kappa.reshape( [1,1,nkappa] )
-    #g_p_k_ = np.where( p_k_ > 0.0, g/p_k_, 0.0)
-    #return 1 + np.sum( _g / p_k_ * rho_h_ * p_kappa_ * r_nn_h_ * (kappa_nn_bar_kappa_), axis=(1,2) ) * dh
-    return 1 + np.sum( _g / p_k_ * rho_h_ * p_kappa_ * r_nn_h_ * (kappa_nn_bar_kappa_-1), axis=(1,2) ) * dh * 5000.0/4999.0
+    return 1 + np.sum( _g / p_k_ * rho_h_ * p_kappa_ * r_nn_h_ * (kappa_nn_bar_kappa_-1), axis=(1,2) ) * dh;
 
 k_nn_bar_k = _k_nn_bar_k()
 #print(k_nn_bar_k)
