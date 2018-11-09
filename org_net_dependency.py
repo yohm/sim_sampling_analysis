@@ -87,7 +87,8 @@ class NodalSampling:
             "P_k": None,
             "r_nn_h": None,
             "p_hprime_given_h": None,
-            "c_h": None
+            "c_h": None,
+            "g_star": None
         }
         
     def r_bar_h(self):
@@ -144,15 +145,9 @@ class NodalSampling:
     def k_nn_k(self, kappa_nn):
         # k, h, kappa are axis=0,1,2, respectively
         assert( kappa_nn.shape == self.kappa.shape )
-        Pk = self.P_k()
-        Pk_ = Pk[ Pk > 0 ]
-        Pk_ = Pk_.reshape( [Pk_.shape[0],1,1,] )
-        _g = g[Pk > 0,:,:]
-        rho_h_ = self.rho_h.reshape( [1,self.nh,1] )
-        p_kappa_ = self.P_kappa.reshape( [1,1,self.nkappa] )
         r_nn_h_ = self.r_nn_h().reshape( [1,self.nh,1] )
         kappa_nn_ = kappa_nn.reshape( [1,1,self.nkappa] )
-        return 1 + np.sum( _g / Pk_ * rho_h_ * p_kappa_ * r_nn_h_ * (kappa_nn_-1), axis=(1,2) ) * self.dh;
+        return 1 + np.sum( self.g_star() * r_nn_h_ * (kappa_nn_-1), axis=(1,2) ) * self.dh;
     
     def _p_hprime_given_h(self):
         # h,h' are axis-0,1
@@ -188,6 +183,19 @@ class NodalSampling:
         _p_kappa = self.P_kappa.reshape( (1,1,self.nkappa) )
         _c_h = self.c_h().reshape( (1,self.nh,1) )
         return 1.0 / self.P_k() * np.sum( g * _rho_h * _p_kappa * _c_h * c_o_kappa, axis=(1,2) ) * self.dh
+
+    def g_star(self):
+        # g*(h,kappa|k) = g(k|h,kappa)rho(h)P_o(kappa) / P(k)
+        if self.results["g_star"] is not None:
+            return self.results["g_star"]
+        Pk = self.P_k()
+        Pk_ = Pk[ Pk > 0 ]
+        Pk_ = Pk_.reshape( [Pk_.shape[0],1,1,] )
+        _g = g[Pk > 0,:,:]
+        rho_h_ = self.rho_h.reshape( [1,self.nh,1] )
+        p_kappa_ = self.P_kappa.reshape( [1,1,self.nkappa] )
+        self.results["g_star"] = _g / Pk_ * rho_h_ * p_kappa_
+        return self.results["g_star"]
 
         
 sampling = NodalSampling(h=h, kappa=kappa, rho_h=rho, P_kappa=P_kappa, r=r)
