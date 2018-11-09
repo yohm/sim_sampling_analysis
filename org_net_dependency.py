@@ -8,6 +8,7 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import binom
+from scipy.stats import entropy
 
 
 # In[ ]:
@@ -298,6 +299,38 @@ c_o_kappa = c_o_kappa / np.sum(c_o_kappa * P_kappa) * 0.03
 plt.plot(sampling.k, sampling.c_k(c_o_kappa), label="k^{-2}")
 plt.legend(loc="best")
 plt.savefig("ck_experiment.pdf")
+
+
+# In[ ]:
+
+
+g_star_k_h = np.sum(sampling.g_star(), axis=2)
+#plt.plot(h, g_star_k_h[10,:])
+#plt.plot(h, rho)
+kls = [entropy( g_star_k_h[k,:], rho ) for k in range( g_star_k_h.shape[0] )]
+plt.plot(sampling.k, kls)
+
+
+# In[ ]:
+
+
+g_star_k_kappa = np.sum(sampling.g_star(), axis=1) * (h[1]-h[0])
+plt.plot(kappa, g_star_k_kappa[10,:], label=r"$k = 10$")
+plt.plot(kappa, g_star_k_kappa[50,:], label=r"$k = 50$")
+plt.plot(kappa, P_kappa, label =r"$P(\kappa)$")
+plt.legend()
+
+
+# In[ ]:
+
+
+#kls = [entropy( P_kappa, g_star_k_kappa[k,:] ) for k in range( g_star_k_h.shape[0] )]
+kls = [entropy( g_star_k_kappa[k,:], P_kappa ) for k in range( g_star_k_h.shape[0] )]
+plt.xscale("log")
+plt.xlim(1.0e0, 1.0e2)
+plt.ylim(0,10)
+plt.plot(sampling.k, kls)
+plt.savefig("kl_divergence.pdf")
 
 
 # In[ ]:
