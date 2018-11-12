@@ -92,6 +92,12 @@ def r_bar():
 
 r_bar()
 
+def r_bar():
+    y = r_bar_h * rho * dh
+    return np.sum(y)
+
+r_bar()
+
 
 # In[ ]:
 
