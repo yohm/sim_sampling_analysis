@@ -61,11 +61,10 @@ class CorrelatedH():
         g.nodes[j]['h'] = temp
 
     @classmethod
-    def iterate_swap(cls, g, target_hdiff=0.6, max_iterate=1000, seed = 9876, figfile="timeseries.png"):
+    def iterate_swap(cls, g, target_hdiff=0, max_iterate=1000, seed = 9876, figfile="timeseries.png"):
         _g = g.copy()
         plot_x = []
         plot_y = []
-        plot_y2 = []
         random.seed(seed)
         q,ne = cls.calc_hdiff(_g)
         target = ne * target_hdiff
@@ -76,8 +75,7 @@ class CorrelatedH():
                 break
             if t % 100 == 0:
                 plot_x.append(t)
-                plot_y.append(q)
-                plot_y2.append(target)
+                plot_y.append(q/ne)
             if t % (max_iterate/100) == 0:
                 eprint(t,q,target)
             #r = random.randrange(0,len(es))
@@ -120,7 +118,7 @@ class Sampling():
 
     @classmethod
     def run_sampling(cls, g, beta, seed=9742):
-        r = lambda x, y: cls.gen_mean(x,y,-10)
+        r = lambda x, y: cls.gen_mean(x,y,beta)
         random.seed(seed)
         g2 = nx.classes.function.create_empty_copy(g)
         #g2 = nx.Graph()
@@ -153,7 +151,7 @@ beta = params["beta"]
 
 g = nx.erdos_renyi_graph(N, kappa_0/N, seed=s0+1234)
 
-CorrelatedH.set_h_weibull(g, 0.8, 0.1, seed=s0+2345)
+CorrelatedH.set_h_weibull(g, alpha, h_0, seed=s0+2345)
 g2 = CorrelatedH.iterate_swap(g, target_hdiff=0.0, max_iterate=iteration, seed=s0+3456)
 eprint("Dh: ", CorrelatedH.hdiff(g), "->", CorrelatedH.hdiff(g2) )
 
