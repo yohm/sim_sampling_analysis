@@ -134,7 +134,7 @@ class Sampling():
         g2.add_edges_from(new_edges)
         return g2
 
-params = {"N": 5000, "kappa_0": 150, "alpha": 0.8, "h_0": 0.1, "iteration": 10000, "_seed": 1234567890}
+params = {"N": 5000, "kappa_0": 150, "alpha": 0.8, "h_0": 0.1, "beta":-10, "iteration": 10000, "_seed": 1234567890}
 if len(sys.argv) != 2:
     eprint("Usage: python correlated.py _input.json")
     sys.exit(1)
@@ -149,6 +149,7 @@ alpha = params["alpha"]
 h_0 = params["h_0"]
 iteration = params["iteration"]
 s0 = params["_seed"]
+beta = params["beta"]
 
 g = nx.erdos_renyi_graph(N, kappa_0/N, seed=s0+1234)
 
@@ -156,7 +157,7 @@ CorrelatedH.set_h_weibull(g, 0.8, 0.1, seed=s0+2345)
 g2 = CorrelatedH.iterate_swap(g, target_hdiff=0.0, max_iterate=iteration, seed=s0+3456)
 eprint("Dh: ", CorrelatedH.hdiff(g), "->", CorrelatedH.hdiff(g2) )
 
-g3 = Sampling.run_sampling(g2, -10, seed=s0+3456)
+g3 = Sampling.run_sampling(g2, beta, seed=s0+3456)
 
 def plot_Pk(g, filename="pk.png"):
     degree_sequence = sorted([d for n, d in g.degree()], reverse=True)
@@ -167,8 +168,11 @@ def plot_Pk(g, filename="pk.png"):
     plt.plot(deg, cnt)
     plt.savefig(filename)
     plt.clf()
+    return list(zip(deg,cnt))
+
     
-plot_Pk(g3)
+pk = plot_Pk(g3)
+np.savetxt("pk.txt", pk)
 
 def plot_knn(g, filename="knn.png"):
     knn = nx.k_nearest_neighbors(g)
@@ -179,8 +183,10 @@ def plot_knn(g, filename="knn.png"):
     plt.plot(x,y)
     plt.savefig(filename)
     plt.clf()
+    return list(zip(x,y))
 
-plot_knn(g3)
+knn = plot_knn(g3)
+np.savetxt("knn.txt", knn)
 
 def plot_ck(g, filename="ck.png"):
     ks = [v for k,v in nx.degree(g)]
@@ -199,12 +205,13 @@ def plot_ck(g, filename="ck.png"):
     plt.plot(x,y)
     plt.savefig(filename)
     plt.clf()
+    return list(zip(x,y))
     
-plot_ck(g3)
+ck = plot_ck(g3)
+np.savetxt("ck.txt", ck)
 
 def average_k(g):
     return np.sum( [k for i,k in nx.degree(g)] ) / len(g)
-
 
 with open("_output.json", "w") as f:
     j = {"average_k": average_k(g3), "average_c": nx.average_clustering(g3), "hdiff_before_sampling": CorrelatedH.hdiff(g2), "hdiff_after_sampling": CorrelatedH.hdiff(g3)}
