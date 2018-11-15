@@ -34,10 +34,9 @@ def rho_h(N, alpha, h_0, seed=3420):
         #print(h[h<0.2].shape)
         hs += h[h<1.0].tolist()
 
-attr = {i:x for i,x in enumerate( rho_h(N,0.8,0.1) ) }
+attr = {i:x for i,x in enumerate( rho_h(N,1.0,0.3) ) }
 #attr = {i:(1.0 if i%2==0 else 0.0) for i in range(N)}
 nx.set_node_attributes(g, attr, "h")
-g.nodes[6]
 
 
 # In[ ]:
@@ -203,9 +202,12 @@ def plot_ck(g):
         ck[k] = ck_sum[k] / ck_count[k]
     x,y = zip(*sorted(ck.items()))
     plt.plot(x,y)
+    return list(zip(x,y))
+    
     
 plot_ck(g2)
-plot_ck(g2_swap)
+a = plot_ck(g2_swap)
+np.savetxt("ck.dat", a)
 
 
 # In[ ]:
