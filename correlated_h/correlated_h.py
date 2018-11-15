@@ -179,7 +179,7 @@ def plot_Pk(g, filename="pk.png"):
 
     
 pk = plot_Pk(g3)
-np.savetxt("pk.txt", pk)
+np.savetxt("pk.dat", pk)
 
 def plot_knn(g, filename="knn.png"):
     knn = nx.k_nearest_neighbors(g)
@@ -193,7 +193,7 @@ def plot_knn(g, filename="knn.png"):
     return list(zip(x,y))
 
 knn = plot_knn(g3)
-np.savetxt("knn.txt", knn)
+np.savetxt("knn.dat", knn)
 
 def plot_ck(g, filename="ck.png"):
     ks = [v for k,v in nx.degree(g)]
@@ -215,7 +215,7 @@ def plot_ck(g, filename="ck.png"):
     return list(zip(x,y))
     
 ck = plot_ck(g3)
-np.savetxt("ck.txt", ck)
+np.savetxt("ck.dat", ck)
 
 def average_k(g):
     return np.sum( [k for i,k in nx.degree(g)] ) / len(g)
