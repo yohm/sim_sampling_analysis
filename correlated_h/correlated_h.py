@@ -35,7 +35,7 @@ class CorrelatedH():
         d = 0.0
         for e in g.edges:
             total += 1
-            d += abs(g.nodes[e[0]]['h'] - g.nodes[e[1]]['h'])
+            d += (g.nodes[e[0]]['h'] - g.nodes[e[1]]['h'])**2
         return(d, total)
 
     @classmethod
@@ -45,7 +45,7 @@ class CorrelatedH():
         d = 0.0
         for j in g[i]:
             hj = g.nodes[j]['h']
-            d += abs(hi - hj)
+            d += (hi - hj)**2
             total += 1
         return (d, total)
 
@@ -61,7 +61,7 @@ class CorrelatedH():
         g.nodes[j]['h'] = temp
 
     @classmethod
-    def iterate_swap(cls, g, target_hdiff=0, max_iterate=1000, seed = 9876, figfile="timeseries.png"):
+    def iterate_swap(cls, g, target_hdiff=0, max_iterate=1000, seed = 9876, figfile="timeseries.png", decrease=True):
         _g = g.copy()
         plot_x = []
         plot_y = []
@@ -91,10 +91,16 @@ class CorrelatedH():
             pn2_n = cls.calc_local_hdiff(_g,n2)[0]
             q2 = (pn1_n-pn1) + (pn2_n-pn2) + q
             #assert( p2 == calc_homophily(g)[0] )
-            if abs(q-target) <= abs(q2-target):
-                cls.swap_h(_g,n1,n2)  # reject the swap
+            if decrease:
+                if abs(q-target) <= abs(q2-target):
+                    cls.swap_h(_g,n1,n2)  # reject the swap
+                else:
+                    q = q2
             else:
-                q = q2
+                if abs(q-target) >= abs(q2-target):
+                    cls.swap_h(_g,n1,n2)  # reject the swap
+                else:
+                    q = q2
         if figfile:
             plt.xlabel("t")
             plt.ylabel(r"$\Delta h$")
@@ -148,11 +154,14 @@ h_0 = params["h_0"]
 iteration = params["iteration"]
 s0 = params["_seed"]
 beta = params["beta"]
+decrease_hdiff = True
+if iteration < 0:
+    decrease_hdiff = False
 
 g = nx.erdos_renyi_graph(N, kappa_0/N, seed=s0+1234)
 
 CorrelatedH.set_h_weibull(g, alpha, h_0, seed=s0+2345)
-g2 = CorrelatedH.iterate_swap(g, target_hdiff=0.0, max_iterate=iteration, seed=s0+3456)
+g2 = CorrelatedH.iterate_swap(g, target_hdiff=0.0, max_iterate=abs(iteration), seed=s0+3456, decrease=decrease_hdiff)
 eprint("Dh: ", CorrelatedH.hdiff(g), "->", CorrelatedH.hdiff(g2) )
 
 g3 = Sampling.run_sampling(g2, beta, seed=s0+3456)
