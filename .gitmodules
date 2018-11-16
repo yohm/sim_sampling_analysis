@@ -1,0 +1,3 @@
+[submodule "ensemble_averaging"]
+	path = ensemble_averaging
+	url = git@github.com:yohm/ensemble_averaging.git
