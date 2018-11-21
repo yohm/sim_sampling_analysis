@@ -15,8 +15,10 @@ from scipy.stats import entropy
 
 
 hr = np.linspace(0.0, 1.0, num=100)
+hr = hr + (hr[1]-hr[0])/2.0
 htheta = np.linspace(0.0, 2*math.pi, num=100)
-kappa = np.arange(1,100)
+htheta = htheta + (hr[1]-hr[0])/2.0
+kappa = np.arange(1,200)
 
 def _rho(hr, htheta):
     # uniform distribution
@@ -56,12 +58,12 @@ plt.plot(kappa,P_kappa)
 def r(r1,theta1,r2,theta2):
     # r1*r2 ( r1*r2-|1-1/pi*|theta2-theta1|| )**2
     delta_theta = np.abs(theta2-theta1)
-    a = np.abs( 1.0 - delta_theta / math.pi )
+    a = np.abs( 1.0 - delta_theta / (math.pi) )
     rp = r1*r2
-    return rp * (rp - a)**2
+    return rp * (rp - a)**4
 
-for i in range(5):
-    plt.plot(htheta, r(i*0.2, htheta, 0.9, 0.0))
+for i in range(10):
+    plt.plot(htheta, r(i*0.1, htheta, 1.0, 0.0))
 
 
 # In[ ]:
@@ -160,37 +162,45 @@ class NodalSampling:
         return self.results["r_nn_h"]
     
     def k_nn_k(self, kappa_nn):
-        # k, h, kappa are axis=0,1,2, respectively
+        # k, h1, h2, kappa are axis=0,1,2,3, respectively
         assert( kappa_nn.shape == self.kappa.shape )
-        r_nn_h_ = self.r_nn_h().reshape( [1,self.nh,1] )
-        kappa_nn_ = kappa_nn.reshape( [1,1,self.nkappa] )
-        return 1 + np.sum( self.g_star() * r_nn_h_ * (kappa_nn_-1), axis=(1,2) ) * self.dh;
+        r_nn_h_ = self.r_nn_h().reshape( [1,self.nh1,self.nh2,1] )
+        kappa_nn_ = kappa_nn.reshape( [1,1,1,self.nkappa] )
+        return 1 + np.sum( self.g_star() * r_nn_h_ * (kappa_nn_-1), axis=(1,2,3) ) * self.dh1 * self.dh2;
     
     def _p_hprime_given_h(self):
-        # h,h' are axis-0,1
+        # h1,h2,h1',h2' are axis-0,1,2,3
         # p(h'|h) = r(h',h) rho(h') / r_bar(h)
         if self.results["p_hprime_given_h"] is not None:
             return self.results["p_hprime_given_h"]
-        h_ = self.h.reshape( (self.nh,1) )
-        h_prime = self.h.reshape( (1,self.nh) )
-        rho_hprime = self.rho_h.reshape( (1,self.nh) )
-        rbar_h = self.r_bar_h().reshape( (self.nh,1) )
-        self.results["p_hprime_given_h"] = r(h_, h_prime) * rho_hprime / rbar_h
+        nh1 = self.nh1
+        nh2 = self.nh2
+        h1_ = self.h1.reshape( (nh1,1,1,1) )
+        h2_ = self.h2.reshape( (1,nh2,1,1) )
+        h1_prime = self.h1.reshape( (1,1,nh1,1) )
+        h2_prime = self.h2.reshape( (1,1,1,nh2) )
+        rho_hprime = self.rho_h.reshape( (1,1,nh1,nh2) )
+        rbar_h = self.r_bar_h().reshape( (nh1,nh2,1,1) )
+        self.results["p_hprime_given_h"] = r(h1_,h2_, h1_prime,h2_prime) * rho_hprime / rbar_h
         return self.results["p_hprime_given_h"]
     
     def c_h(self):
-        # h, h', h'' are axis-0,1,2, respectively
+        # h1,h2, h1',h2', h1'',h2'', are axis-0,1,2,3,4,5 respectively
         # \sum_{h', h''} = r(h', h'') * p(h'|h) * p(h''|h)
         if self.results["c_h"] is not None:
             return self.results["c_h"]
-        nh = self.nh
-        h_ = self.h.reshape( (nh,1,1) )
-        h_prime = self.h.reshape( (1,nh,1) )
-        h_prime2 = self.h.reshape( (1,1,nh) )
-        p_hprime_given_h_ = self._p_hprime_given_h().reshape( (nh,nh,1) )
-        p_hprime2_given_h_ = self._p_hprime_given_h().reshape( (nh,1,nh) )
-        r_ = self.r(h_prime, h_prime2).reshape( (1,nh,nh) )
-        self.results["c_h"] = np.sum( r_ * p_hprime_given_h_ * p_hprime2_given_h_, axis=(1,2) ) * self.dh * self.dh
+        nh1 = self.nh1
+        nh2 = self.nh2
+        h1_ = self.h1.reshape( (nh1,1,1,1,1,1) )
+        h2_ = self.h2.reshape( (1,nh2,1,1,1,1) )
+        h1_prime = self.h1.reshape( (1,1,nh1,1,1,1) )
+        h2_prime = self.h2.reshape( (1,1,1,nh2,1,1) )
+        h1_prime2 = self.h1.reshape( (1,1,1,1,nh1,1) )
+        h2_prime2 = self.h2.reshape( (1,1,1,1,1,nh2) )
+        p_hprime_given_h_ = self._p_hprime_given_h().reshape( (nh1,nh2,nh1,nh2,1,1) )
+        p_hprime2_given_h_ = self._p_hprime_given_h().reshape( (nh1,nh2,1,1,nh1,nh2) )
+        r_ = self.r(h1_prime, h2_prime, h1_prime2, h2_prime2).reshape( (1,1,nh1,nh2,nh1,nh2) )
+        self.results["c_h"] = np.sum( r_ * p_hprime_given_h_ * p_hprime2_given_h_, axis=(2,3,4,5) ) * (self.dh1*self.dh2)**2
         return self.results["c_h"]
     
     def c_k(self, c_o_kappa):
@@ -207,14 +217,17 @@ class NodalSampling:
             return self.results["g_star"]
         Pk = self.P_k()
         Pk_ = Pk[ Pk > 0 ]
-        Pk_ = Pk_.reshape( [Pk_.shape[0],1,1,] )
+        Pk_ = Pk_.reshape( [Pk_.shape[0],1,1,1,] )
         _g = g[Pk > 0,:,:]
-        rho_h_ = self.rho_h.reshape( [1,self.nh,1] )
+        rho_h_ = self.rho_h.reshape( [1,self.nh1,self.nh2,1] )
         p_kappa_ = self.P_kappa.reshape( [1,1,self.nkappa] )
         self.results["g_star"] = _g / Pk_ * rho_h_ * p_kappa_
         return self.results["g_star"]
 
-        
+
+# In[ ]:
+
+
 sampling = NodalSampling(h1=hr, h2=htheta, kappa=kappa, rho_h=rho, P_kappa=P_kappa, r=r)
 plt.plot(hr, sampling.r_bar_h()[:,0] )
 print(sampling.r_bar())
@@ -254,6 +267,7 @@ k_nn = sampling.k_nn_k(kappa_nn)
 plt.xscale("log")
 plt.xlim(1.0e0, 1.0e2)
 plt.plot(sampling.k, k_nn)
+k_nn
 
 
 # In[ ]:
@@ -264,16 +278,13 @@ kappa_nn = np.full(kappa.shape, kappa_mean + 1)
 k_nn = sampling.k_nn_k(kappa_nn)
 plt.xscale("log")
 plt.xlim(1.0e0, 1.0e2)
-plt.ylim(22,34)
 plt.plot(sampling.k, k_nn, label="non assortative")
 
 kappa_nn = np.full(kappa.shape, kappa_mean + 1 + kappa*0.2-30)
-#plt.plot(kappa, kappa_nn)
 k_nn = sampling.k_nn_k(kappa_nn)
 plt.plot(sampling.k, k_nn, label="assortative")
 
 kappa_nn = np.full(kappa.shape, kappa_mean + 1 - kappa*0.2+30)
-#plt.plot(kappa, kappa_nn)
 k_nn = sampling.k_nn_k(kappa_nn)
 plt.plot(sampling.k, k_nn, label="disassortative")
 plt.legend(loc="upper left")
@@ -283,7 +294,7 @@ plt.savefig("knn_experiment.pdf")
 # In[ ]:
 
 
-plt.plot(sampling.h, sampling.c_h())
+plt.plot(sampling.h1, sampling.c_h()[:,0])
 
 
 # In[ ]:
