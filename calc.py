@@ -9,6 +9,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import binom
 
+#plt.rcParams['figure.figsize'] = (7,5)
+plt.rcParams["figure.subplot.left"] = 0.18
+plt.rcParams['font.family'] ='sans-serif'
+plt.rcParams['xtick.direction'] = 'in'
+plt.rcParams['ytick.direction'] = 'in'
+plt.rcParams['xtick.major.width'] = 1.0
+plt.rcParams['ytick.major.width'] = 1.0
+plt.rcParams['axes.labelsize'] = 18
+plt.rcParams['font.size'] = 14
+plt.rcParams['axes.linewidth'] = 1.2
+
 
 # In[ ]:
 
@@ -23,14 +34,17 @@ k = np.arange(0,200)
 # In[ ]:
 
 
-def _rho(alpha=1.0, x_0=0.3):
+def _rho(alpha=0.8, x_0=0.3):
     # Weibull distribution
     ro = alpha/x_0*(h/x_0)**(alpha-1) * np.exp( -(h/x_0)**alpha )
     return ro / (np.sum(ro)*dh)   # normalize to reduce numerical error
 
 rho = _rho()
 print(np.sum(rho)*dh)
-plt.plot(h, rho)
+plt.xlabel("h")
+plt.ylabel(r"$\rho(h)$")
+plt.plot(h, rho, label=r'$\rho(h)$')
+plt.legend()
 
 
 # In[ ]:
@@ -50,6 +64,8 @@ def _p_kappa():
     #sigma = 30.0
     #return 1.0/math.sqrt(2.0*math.pi*sigma**2) * np.exp( -(kappa-mean)**2/(2.0*sigma**2) )
 
+fig = plt.figure(figsize=(6,4))
+    
 p_kappa = _p_kappa()
 plt.plot(kappa,p_kappa)
 
@@ -59,6 +75,8 @@ plt.plot(kappa,p_kappa)
 
 def r(h1, h2):
     # generalized mean
+    # beta = -1
+    # return ((h1**beta+h2**beta)/2)**(1.0/beta)
     return np.minimum(h1,h2)
     # return np.maximum(h1,h2)
     #return np.sqrt(h1*h2)
@@ -333,17 +351,21 @@ _pearson()
 # In[ ]:
 
 
+sim_result_dir = "/Users/murase/work/oacis/public/Result_development/5bcd5bb6d12ac6187c093163/5c09fecbd12ac6a7d393ef29/5c0a13c6d12ac6a7d393f002/"
+
 # comparison with simulation
 def _compare_pk():
-    path = "/Users/murase/work/oacis/public/Result_development/5bcd5bb6d12ac6187c093163/5bd00a02d12ac61729031987/5bd00bd1d12ac617290319fe/degree_distribution_ave.dat"
+    path = sim_result_dir + "degree_distribution_ave.dat"
     d = np.loadtxt(path)
     plt.yscale("log")
-    plt.ylim(1.0e-4,4.0e-2)
-    plt.xlim(0,70)
-    plt.xlabel("k")
-    plt.ylabel("P(k)")
-    plt.plot(k, P_k )
-    plt.plot(d[:,0], d[:,1]/5000)
+    plt.ylim(1.0e-4,1.0e-1)
+    plt.xlim(0,60)
+    plt.xlabel(r"$k$")
+    plt.ylabel(r"$P(k)$")
+    plt.xticks(np.arange(0, 80, step=20))
+    plt.plot(d[:,0], d[:,1]/5000, '.', label='simulation')
+    plt.plot(k, P_k, label='theory')
+    plt.legend()
     plt.savefig("pk_sim.pdf")
     
 _compare_pk()
@@ -355,14 +377,14 @@ _compare_pk()
 
 
 def _compare_knn():
-    path = "/Users/murase/work/oacis/public/Result_development/5bcd5bb6d12ac6187c093163/5bd00a02d12ac61729031987/5bd00bd1d12ac617290319fe/neighbor_degree_correlation_ave.dat"
+    path = sim_result_dir + "neighbor_degree_correlation_ave.dat"
     d = np.loadtxt(path)
     plt.xscale("log")
     plt.xlim(1.0e0, 1.0e2)
-    plt.xlabel("k")
-    plt.ylabel("k_nn(k)")
+    plt.xlabel(r"$k$")
+    plt.ylabel(r"$k_{nn}(k)$")
+    plt.plot(d[:,0], d[:,1], '.')
     plt.plot(k[P_k > 0], k_nn_bar_k)
-    plt.plot(d[:,0], d[:,1])
     plt.savefig("knn_sim.pdf")
     
 _compare_knn()
@@ -372,16 +394,19 @@ _compare_knn()
 
 
 def _compare_ck():
-    path = "/Users/murase/work/oacis/public/Result_development/5bcd5bb6d12ac6187c093163/5bd00a02d12ac61729031987/5bd00bd1d12ac617290319fe/cc_degree_correlation_ave.dat"
+    path = sim_result_dir + "cc_degree_correlation_ave.dat"
     d = np.loadtxt(path)
+    plt.ylim(1e-3,1.2e-2)
+    plt.xlim(1e0,1e2)
     plt.xscale("log")
     plt.yscale("log")
-    plt.xlabel("k")
-    plt.ylabel("c(k)")
+    plt.xlabel(r"$k$")
+    plt.ylabel(r"$c(k)$")
+    plt.plot(d[:,0], d[:,1], '.')
     plt.plot(k[2:], c_k[2:])
-    plt.plot(d[:,0], d[:,1])
+    plt.yticks([0.001,0.01])
     plt.savefig("ck_sim.pdf")
-    
+
 _compare_ck()
 
 

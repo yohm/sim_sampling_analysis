@@ -26,16 +26,7 @@ plt.rcParams['axes.linewidth'] = 1.2
 
 h = np.linspace(0.0, 1.0, num=501)[1::] # exclude the first because it can diverge
 h = h - (h[1]-h[0])/2
-kappa = np.arange(1,300)
-
-def _rho(h, alpha=0.8, x_0=0.3):
-    # Weibull distribution
-    ro = alpha/x_0*(h/x_0)**(alpha-1) * np.exp( -(h/x_0)**alpha )
-    dh = h[1]-h[0]
-    return ro / (np.sum(ro)*dh)   # normalize to reduce numerical error
-
-rho = _rho(h)
-plt.plot(h, rho)
+kappa = np.arange(1,500)
 
 
 # In[ ]:
@@ -51,8 +42,27 @@ def _p_kappa(kappa):
     pmf = b.pmf(kappa)
     return pmf / np.sum(pmf)   # normalize to reduce error
 
+def _power_law_p_kappa(kappa, alpha=-3):
+    p_kappa_ = kappa.astype(np.float64) ** alpha
+    return p_kappa_ / np.sum(p_kappa_)
+
+def _log_normal_p_kappa(kappa, mu, sigma):
+    pdf = (np.exp(-(np.log(kappa) - np.log(mu))**2 / (2 * sigma**2)) / (kappa * sigma * np.sqrt(2 * np.pi)))
+    return pdf / np.sum(pdf)
+
 P_kappa = _p_kappa(kappa)
-plt.plot(kappa,P_kappa)
+plt.plot(kappa,P_kappa, label="Binomial dist.")
+#P_kappa = _power_law_p_kappa(kappa, -2)
+P_kappa = _log_normal_p_kappa(kappa, 150, 0.5)
+plt.xscale("linear")
+plt.yscale("linear")
+plt.xlabel(r"$k$")
+plt.ylabel(r"$P(k)$")
+plt.plot(kappa,P_kappa, label="Log-normal dist.")
+plt.legend()
+plt.savefig("binom_lognormal_pkappa.pdf")
+kappa_mean = np.sum(kappa*P_kappa)
+kappa_mean
 
 
 # In[ ]:
@@ -71,6 +81,50 @@ def gen_mean(x,y,beta):  # when beta<=-10 or >=10, minimum or maximum is used
 r = lambda x, y: gen_mean(x,y,-10)
 
 r(1.0,3.0)
+
+
+# In[ ]:
+
+
+def _rho(h, alpha=0.8, x_0=0.3):
+    # Weibull distribution
+    ro = alpha/x_0*(h/x_0)**(alpha-1) * np.exp( -(h/x_0)**alpha )
+    dh = h[1]-h[0]
+    return ro / (np.sum(ro)*dh)   # normalize to reduce numerical error
+
+
+def _rho_average_control(h, r, alpha=1.0, r_bar=0.2):
+    h_prime = np.copy(h).reshape([1,h.shape[0]])
+    h_ = h.reshape( [h.shape[0],1] )
+    rhh = r(h_, h_prime)
+    dh = h[1]-h[0]
+    
+    def calculate_r_bar(x_0):
+        rho_ = _rho(h, alpha, x_0)
+        r_bar_h = np.sum( rhh * rho_.reshape([1,h.shape[0]]) * dh, axis=1)
+        return np.sum(r_bar_h * rho_ * dh, axis=0)
+    
+    def estimate_x_0(results,y_target):
+        xs = np.array( [x[0] for x in results] )
+        ys = np.array( [x[1] for x in results] )
+        A = np.vstack([xs, np.ones(len(xs))]).T
+        m, c = np.linalg.lstsq(A, ys, rcond=None)[0]
+        return (y_target - c) / m
+    
+    results = [ (1.0, 1.0), (0.0, 0.0) ]  # heuristic
+    for i in range(100):
+        x_0 = estimate_x_0(results, r_bar)
+        r_bar_c = calculate_r_bar(x_0)
+        print(i,x_0,r_bar_c)
+        results.append( (x_0,r_bar_c) )
+        if len(results) > 10:
+            results.pop(0)
+        if abs(r_bar_c - r_bar) < 0.001:
+            return (x_0, _rho(h, alpha, x_0))
+
+#rho = _rho(h)
+x_0, rho = _rho_average_control(h, r, alpha=0.8, r_bar=0.1)
+plt.plot(h, rho)
 
 
 # In[ ]:
@@ -137,6 +191,7 @@ class NodalSampling:
         if self.results["P_k"] is not None:
             return self.results["P_k"]
         _g = g * self.rho_h.reshape([1,self.nh,1]) * self.P_kappa.reshape([1,1,self.nkappa])
+        self.results["P_k"]
         self.results["P_k"] = np.sum(_g, axis=(1,2)) * self.dh
         return self.results["P_k"]
     
@@ -193,7 +248,10 @@ class NodalSampling:
         _rho_h = self.rho_h.reshape( (1,self.nh,1) )
         _p_kappa = self.P_kappa.reshape( (1,1,self.nkappa) )
         _c_h = self.c_h().reshape( (1,self.nh,1) )
-        return 1.0 / self.P_k() * np.sum( g * _rho_h * _p_kappa * _c_h * c_o_kappa, axis=(1,2) ) * self.dh
+        Pk = self.P_k()
+        _Pk = Pk[Pk>0]
+        _g = self.g()[Pk>0,:,:]
+        return 1.0 / _Pk * np.sum( _g * _rho_h * _p_kappa * _c_h * c_o_kappa, axis=(1,2) ) * self.dh
 
     def g_star(self):
         # g*(h,kappa|k) = g(k|h,kappa)rho(h)P_o(kappa) / P(k)
@@ -225,10 +283,18 @@ plt.plot(sampling.k, g[:,300,150])
 # In[ ]:
 
 
+plt.xscale("log")
 plt.yscale("log")
+plt.xlim(1e0,1e2)
 plt.ylim(1.0e-4,1.0e-1)
-plt.xlim(0,50)
 plt.plot( sampling.k, sampling.P_k() )
+
+
+# In[ ]:
+
+
+# kappa_mean
+(sampling.r_bar() * np.sum(kappa*P_kappa), np.sum(sampling.P_k()*sampling.k) )
 
 
 # In[ ]:
@@ -243,38 +309,41 @@ plt.legend()
 
 
 kappa_mean = np.sum(kappa * P_kappa)
-kappa_nn = np.full(kappa.shape, kappa_mean + 1)
+kappa2_mean = np.sum(kappa**2 * P_kappa)
+kappa_nn = np.full(kappa.shape, kappa2_mean/kappa_mean)
 k_nn = sampling.k_nn_k(kappa_nn)
 plt.xscale("log")
 plt.xlim(1.0e0, 1.0e2)
-plt.plot(sampling.k, k_nn)
+plt.plot(sampling.k[sampling.P_k()>0], k_nn)
 
 
 # In[ ]:
 
 
 kappa_mean = np.sum(kappa * P_kappa)
-kappa_nn = np.full(kappa.shape, kappa_mean + 1)
+kappa2_mean = np.sum(kappa**2 * P_kappa)
+kappa_nn_mean = kappa2_mean / kappa_mean
+k = sampling.k[ sampling.P_k()>0]
+
+kappa_nn = np.full(kappa.shape, kappa_nn_mean)
 k_nn = sampling.k_nn_k(kappa_nn)
 plt.xscale("log")
-plt.xlim(1.0e0, 1.0e2)
-plt.ylim(18,32)
-plt.yticks( np.arange(20,33,step=4) )
 plt.xlabel(r"$k$")
 plt.ylabel(r"$k_{nn}(k)$")
-plt.plot(sampling.k, k_nn, '-', label="non assortative")
+plt.xlim(1.0e0, 1.0e2)
+plt.plot(k, k_nn, '-', label="non assortative")
 
-kappa_nn = np.full(kappa.shape, kappa_mean + 1 + kappa*0.2-30)
+kappa_nn = kappa_nn_mean + (kappa-kappa_mean)*0.2
 #plt.plot(kappa, kappa_nn)
 k_nn = sampling.k_nn_k(kappa_nn)
-plt.plot(sampling.k, k_nn, '-.', label="assortative")
+plt.plot(k, k_nn, '-.', label="assortative")
 
-kappa_nn = np.full(kappa.shape, kappa_mean + 1 - kappa*0.2+30)
+kappa_nn = kappa_nn_mean + (kappa-kappa_mean)*(-0.2)
 #plt.plot(kappa, kappa_nn)
 k_nn = sampling.k_nn_k(kappa_nn)
-plt.plot(sampling.k, k_nn, '--', label="disassortative")
+plt.plot(k, k_nn, '--', label="disassortative")
 plt.legend(loc="upper left")
-plt.savefig("knn_experiment.pdf")
+plt.savefig("knn_lognormal_experiment.pdf")
 
 
 # In[ ]:
@@ -289,33 +358,32 @@ plt.plot(sampling.h, sampling.c_h())
 c_o_kappa = 0.05
 plt.yscale("log")
 plt.xscale("log")
-plt.plot(sampling.k, sampling.c_k(c_o_kappa))
+plt.plot(sampling.k[sampling.P_k()>0], sampling.c_k(c_o_kappa))
 
 
 # In[ ]:
 
 
+k = sampling.k[ sampling.P_k() > 0 ]
 c_o = 0.03 # fix the original clustering coefficient
 c_o_kappa = np.full(kappa.shape, c_o)
 plt.xscale("log")
 plt.yscale("log")
 plt.xlim(1.0e0, 1.0e2)
-plt.ylim(1.0e-3,1.2e-2)
-plt.yticks([0.001,0.01])
-plt.xlabel(r'$k$')
-plt.ylabel(r'$c(k)$')
-plt.plot(sampling.k, sampling.c_k(c_o_kappa), '-', label="const")
+plt.xlabel(r"$k$")
+plt.ylabel(r"$c(k)$")
+plt.plot(k, sampling.c_k(c_o_kappa), '-', label="const")
 
 c_o_kappa = 1.0 / kappa
 c_o_kappa = c_o_kappa / np.sum(c_o_kappa * P_kappa) * 0.03
-plt.plot(sampling.k, sampling.c_k(c_o_kappa), '-.', label=r"$k^{-1}$")
+plt.plot(k, sampling.c_k(c_o_kappa), '-.', label=r"$k^{-1}$")
 plt.legend(loc="best")
 
 c_o_kappa = 1.0 / (kappa**2)
 c_o_kappa = c_o_kappa / np.sum(c_o_kappa * P_kappa) * 0.03
-plt.plot(sampling.k, sampling.c_k(c_o_kappa), '--', label=r"$k^{-2}$")
-plt.legend(loc="lower left")
-plt.savefig("ck_experiment.pdf")
+plt.plot(k, sampling.c_k(c_o_kappa), '--', label=r"$k^{-2}$")
+plt.legend(loc="best")
+plt.savefig("ck_lognormal_experiment.pdf")
 
 
 # In[ ]:
@@ -344,11 +412,10 @@ plt.legend()
 #kls = [entropy( P_kappa, g_star_k_kappa[k,:] ) for k in range( g_star_k_h.shape[0] )]
 kls = [entropy( g_star_k_kappa[k,:], P_kappa ) for k in range( g_star_k_h.shape[0] )]
 plt.xscale("log")
-plt.xlabel(r"$k$")
-plt.ylabel(r"$D(k)$")
+plt.yscale("linear")
 plt.xlim(1.0e0, 1.0e2)
-plt.ylim(0,8)
-plt.plot(sampling.k, kls)
+plt.ylim(0,4)
+plt.plot(k, kls)
 plt.savefig("kl_divergence.pdf")
 
 
