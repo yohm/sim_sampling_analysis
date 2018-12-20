@@ -10,14 +10,21 @@ import matplotlib.pyplot as plt
 from scipy.stats import binom
 from scipy.stats import entropy
 
+
+# In[ ]:
+
+
 plt.rcParams["figure.subplot.left"] = 0.18
+plt.rcParams["figure.subplot.right"] = 0.95
+plt.rcParams["figure.subplot.bottom"] = 0.15
+plt.rcParams["figure.subplot.top"] = 0.95
+plt.rcParams['font.size'] = 16
 plt.rcParams['font.family'] ='sans-serif'
 plt.rcParams['xtick.direction'] = 'in'
 plt.rcParams['ytick.direction'] = 'in'
 plt.rcParams['xtick.major.width'] = 1.0
 plt.rcParams['ytick.major.width'] = 1.0
 plt.rcParams['axes.labelsize'] = 18
-plt.rcParams['font.size'] = 14
 plt.rcParams['axes.linewidth'] = 1.2
 
 
@@ -35,6 +42,9 @@ def _rho(h, alpha=0.8, x_0=0.3):
     return ro / (np.sum(ro)*dh)   # normalize to reduce numerical error
 
 rho = _rho(h)
+plt.xlim(0.0,1.0)
+plt.xlabel(r"$h$")
+plt.ylabel(r"$\rho(h)$")
 plt.plot(h, rho)
 
 
@@ -52,6 +62,8 @@ def _p_kappa(kappa):
     return pmf / np.sum(pmf)   # normalize to reduce error
 
 P_kappa = _p_kappa(kappa)
+plt.xlabel(r"$\kappa$")
+plt.ylabel(r"$P(\kappa)$")
 plt.plot(kappa,P_kappa)
 
 
@@ -190,10 +202,11 @@ class NodalSampling:
     def c_k(self, c_o_kappa):
         # k, h, kappa are axis-0,1,2, respectively
         # 1/P(k) * \sum_{h,\kappa} g(k|h,\kappa) rho(h) P(\kappa) c_h c_o(\kappa)
+        _c_o_kappa = c_o_kappa.reshape( (1,1,self.nkappa) )
         _rho_h = self.rho_h.reshape( (1,self.nh,1) )
         _p_kappa = self.P_kappa.reshape( (1,1,self.nkappa) )
         _c_h = self.c_h().reshape( (1,self.nh,1) )
-        return 1.0 / self.P_k() * np.sum( g * _rho_h * _p_kappa * _c_h * c_o_kappa, axis=(1,2) ) * self.dh
+        return 1.0 / self.P_k() * np.sum( g * _rho_h * _p_kappa * _c_h * _c_o_kappa, axis=(1,2) ) * self.dh
 
     def g_star(self):
         # g*(h,kappa|k) = g(k|h,kappa)rho(h)P_o(kappa) / P(k)
@@ -202,7 +215,7 @@ class NodalSampling:
         Pk = self.P_k()
         Pk_ = Pk[ Pk > 0 ]
         Pk_ = Pk_.reshape( [Pk_.shape[0],1,1,] )
-        _g = g[Pk > 0,:,:]
+        _g = self.g()[Pk > 0,:,:]
         rho_h_ = self.rho_h.reshape( [1,self.nh,1] )
         p_kappa_ = self.P_kappa.reshape( [1,1,self.nkappa] )
         self.results["g_star"] = _g / Pk_ * rho_h_ * p_kappa_
@@ -210,6 +223,8 @@ class NodalSampling:
 
         
 sampling = NodalSampling(h=h, kappa=kappa, rho_h=rho, P_kappa=P_kappa, r=r)
+plt.xlabel(r"$h$")
+plt.ylabel(r"$\bar{r}(h)$")
 plt.plot(h, sampling.r_bar_h())
 print(sampling.r_bar())
 
@@ -219,6 +234,8 @@ print(sampling.r_bar())
 
 g = sampling.g()
 print(g.shape)
+plt.xlabel(r"$k$")
+plt.ylabel(r"$g(k|h,\kappa)_{h=0.6,\kappa=150}$")
 plt.plot(sampling.k, g[:,300,150])
 
 
@@ -228,14 +245,18 @@ plt.plot(sampling.k, g[:,300,150])
 plt.yscale("log")
 plt.ylim(1.0e-4,1.0e-1)
 plt.xlim(0,50)
+plt.xlabel(r"$k$")
+plt.ylabel(r"$P(k)$")
 plt.plot( sampling.k, sampling.P_k() )
 
 
 # In[ ]:
 
 
-plt.plot(h, sampling.r_nn_h(), label="r_nn(h)")
-plt.plot(h, sampling.r_bar_h(), label="r(h)")
+plt.xlabel(r"$h$")
+plt.ylabel(r"$r(h), r_{nn}(h)$")
+plt.plot(h, sampling.r_nn_h(), label=r"$r_{nn}(h)$")
+plt.plot(h, sampling.r_bar_h(), label=r"$r(h)$")
 plt.legend()
 
 
@@ -246,6 +267,8 @@ kappa_mean = np.sum(kappa * P_kappa)
 kappa_nn = np.full(kappa.shape, kappa_mean + 1)
 k_nn = sampling.k_nn_k(kappa_nn)
 plt.xscale("log")
+plt.xlabel(r"$k$")
+plt.ylabel(r"$k_{nn}(k)$")
 plt.xlim(1.0e0, 1.0e2)
 plt.plot(sampling.k, k_nn)
 
@@ -280,15 +303,19 @@ plt.savefig("knn_experiment.pdf")
 # In[ ]:
 
 
+plt.xlabel(r"$h$")
+plt.ylabel(r"$c_{h}$")
 plt.plot(sampling.h, sampling.c_h())
 
 
 # In[ ]:
 
 
-c_o_kappa = 0.05
+c_o_kappa = np.full( kappa.shape, 0.05 )
 plt.yscale("log")
 plt.xscale("log")
+plt.xlabel(r"$k$")
+plt.ylabel(r"$c(k)$")
 plt.plot(sampling.k, sampling.c_k(c_o_kappa))
 
 
@@ -325,17 +352,53 @@ g_star_k_h = np.sum(sampling.g_star(), axis=2)
 #plt.plot(h, g_star_k_h[10,:])
 #plt.plot(h, rho)
 kls = [entropy( g_star_k_h[k,:], rho ) for k in range( g_star_k_h.shape[0] )]
+plt.xscale("log")
+plt.xlim(1.0e0, 1.0e2)
+plt.xlabel(r"$k$")
+plt.ylabel(r"$D_{h}(k)$")
 plt.plot(sampling.k, kls)
 
 
 # In[ ]:
 
 
+h_mean = np.sum(h * rho) * (h[1]-h[0])
+hbar_k = np.sum( g_star_k_h * h.reshape([1,h.shape[0]]), axis=1 ) * (h[1]-h[0])
+plt.xscale("log")
+plt.xlim(1.0e0, 1.0e2)
+plt.ylim(0.0, 1.0)
+plt.xlabel(r"$k$")
+plt.ylabel(r"$\bar{h}(k)$")
+plt.plot(sampling.k, hbar_k)
+plt.plot(sampling.k, np.full(sampling.k.shape, h_mean), '--', color='gray', zorder=1 )
+plt.savefig("hbar_k.pdf")
+
+
+# In[ ]:
+
+
 g_star_k_kappa = np.sum(sampling.g_star(), axis=1) * (h[1]-h[0])
+plt.xlabel(r"$\kappa$")
+plt.ylabel(r"$P(\kappa|k)$")
 plt.plot(kappa, g_star_k_kappa[10,:], label=r"$k = 10$")
 plt.plot(kappa, g_star_k_kappa[50,:], label=r"$k = 50$")
 plt.plot(kappa, P_kappa, label =r"$P(\kappa)$")
 plt.legend()
+
+
+# In[ ]:
+
+
+kappa_bar_k = np.sum( g_star_k_kappa * kappa.reshape([1,kappa.shape[0]]), axis=1 )
+plt.xscale("log")
+plt.xlim(1.0e0, 1.0e2)
+plt.ylim(0,300)
+plt.xlabel(r"$k$")
+plt.ylabel(r"$\bar{\kappa}(k)$")
+plt.yticks( np.arange(0,301,step=100) )
+plt.plot( sampling.k, kappa_bar_k )
+plt.plot( sampling.k, np.full( sampling.k.shape, kappa_mean), '--', color='gray', zorder=1 )
+plt.savefig("kappabar_k.pdf")
 
 
 # In[ ]:

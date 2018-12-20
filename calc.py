@@ -9,15 +9,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import binom
 
+
+# In[ ]:
+
+
 #plt.rcParams['figure.figsize'] = (7,5)
 plt.rcParams["figure.subplot.left"] = 0.18
+plt.rcParams["figure.subplot.right"] = 0.95
+plt.rcParams["figure.subplot.bottom"] = 0.15
+plt.rcParams["figure.subplot.top"] = 0.95
 plt.rcParams['font.family'] ='sans-serif'
 plt.rcParams['xtick.direction'] = 'in'
 plt.rcParams['ytick.direction'] = 'in'
 plt.rcParams['xtick.major.width'] = 1.0
 plt.rcParams['ytick.major.width'] = 1.0
 plt.rcParams['axes.labelsize'] = 18
-plt.rcParams['font.size'] = 14
+plt.rcParams['font.size'] = 16
 plt.rcParams['axes.linewidth'] = 1.2
 
 
@@ -41,10 +48,9 @@ def _rho(alpha=0.8, x_0=0.3):
 
 rho = _rho()
 print(np.sum(rho)*dh)
-plt.xlabel("h")
+plt.xlabel(r"$h$")
 plt.ylabel(r"$\rho(h)$")
 plt.plot(h, rho, label=r'$\rho(h)$')
-plt.legend()
 
 
 # In[ ]:
@@ -67,6 +73,8 @@ def _p_kappa():
 fig = plt.figure(figsize=(6,4))
     
 p_kappa = _p_kappa()
+plt.xlabel(r"$\kappa$")
+plt.ylabel(r"$P(\kappa)$")
 plt.plot(kappa,p_kappa)
 
 
@@ -98,6 +106,8 @@ def _r_bar_h():
     
 r_bar_h = _r_bar_h()
 print(r_bar_h.shape)
+plt.xlabel(r"$h$")
+plt.ylabel(r"$\bar{r}(h)$")
 plt.plot(h, r_bar_h)
 
 
@@ -381,6 +391,7 @@ def _compare_knn():
     d = np.loadtxt(path)
     plt.xscale("log")
     plt.xlim(1.0e0, 1.0e2)
+    plt.yticks(np.arange(20, 35, step=5))
     plt.xlabel(r"$k$")
     plt.ylabel(r"$k_{nn}(k)$")
     plt.plot(d[:,0], d[:,1], '.')
@@ -418,6 +429,35 @@ def _compare_average_c():
 
 _compare_average_c()
 # numerical result : 0.006672 (http://localhost:3000/parameter_sets/5bd00a02d12ac61729031987?plot_type=line&x_axis=N&y_axis=.ClusteringCoefficient&series=&irrelevants=#!tab-plot)
+
+
+# In[ ]:
+
+
+def _h_nn_h():
+    # h, h_prime are axis=0,1, respectively.
+    nh = h.shape[0]
+    h_prime = np.copy(h).reshape([1,nh])
+    rho_h_prime = rho.reshape([1,nh])
+    h_ = h.reshape( [nh,1] )
+    r_bar_h_ = r_bar_h.reshape( [nh,1] )
+    return np.sum( r(h_,h_prime)*rho_h_prime*h_prime / r_bar_h_, axis=1 ) * dh
+
+h_nn_h = _h_nn_h()
+
+def _compare_hnn():
+    path = "/Users/murase/work/oacis/public/Result_development/5bcd5bb6d12ac6187c093163/5c09fecbd12ac6a7d393ef29/5c188527d12ac6433d77c434/fnn.dat"
+    d = np.loadtxt(path)
+    plt.xlabel(r"$h$")
+    plt.ylabel(r"$h_{nn}(h)$")
+    plt.xlim(0,1)
+    plt.ylim(0.25,0.5)
+    plt.yticks( np.arange(0.3,0.51,step=0.1) )
+    plt.plot(d[:,0],d[:,1], '.')
+    plt.plot(h, h_nn_h)
+    plt.savefig("hnn_sim.pdf")
+    
+_compare_hnn()
 
 
 # In[ ]:
