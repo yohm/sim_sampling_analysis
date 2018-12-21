@@ -101,6 +101,8 @@ def r(sigma1,tau1,sigma2,tau2):
 s1 = np.array([0,1,2])
 r(s1, 1, 2, 1)
 
+sigma_max,tau_max
+
 
 # In[ ]:
 
@@ -308,8 +310,8 @@ plt.plot( sampling.k, sampling.P_k() )
 
 plt.xlabel(r"$\sigma$")
 plt.ylabel(r"$r(\sigma)$")
-plt.plot(sigma, sampling.r_nn_h()[:,0], label=r"$r_{nn}(h)$")
-plt.plot(sigma, sampling.r_bar_h()[:,0], label=r"$r(h)$")
+plt.plot(sigma, sampling.r_nn_h()[:,0], label=r"$r_{nn}(h)$ @ $\tau=0$")
+plt.plot(sigma, sampling.r_bar_h()[:,0], label=r"$r(h)$ @ $\tau=0$")
 plt.legend()
 
 
@@ -318,8 +320,8 @@ plt.legend()
 
 plt.xlabel(r"$\tau$")
 plt.ylabel(r"$r(\tau)$")
-plt.plot(tau, sampling.r_nn_h()[0,:], label=r"$r_{nn}(\tau)$")
-plt.plot(tau, sampling.r_bar_h()[0,:], label=r"$r(\tau)$")
+plt.plot(tau, sampling.r_nn_h()[0,:], label=r"$r_{nn}(\tau)$ @ $\sigma=0$")
+plt.plot(tau, sampling.r_bar_h()[0,:], label=r"$r(\tau)$ @ $\sigma=0$")
 plt.legend()
 
 
@@ -426,7 +428,7 @@ plt.legend()
 # In[ ]:
 
 
-def _h_nn_h():
+def _sigma_nn_h():
     # sigma1,tau1, sigma2,tau2 are axis=0,1,2,3 respectively.
     ns = sigma.shape[0]
     nt = tau.shape[0]
@@ -436,11 +438,164 @@ def _h_nn_h():
     sigma1 = sigma.reshape( (ns,1,1,1) )
     tau1 = tau.reshape( (1,nt,1,1) )
     r_bar_h = sampling.r_bar_h().reshape( (ns,nt,1,1) )
-    return np.sum( r(sigma1,tau1,sigma2,tau2)*rho_h2*sigma2*tau2 / r_bar_h, axis=(2,3) )
+    return np.sum( r(sigma1,tau1,sigma2,tau2)*rho_h2*sigma2 / r_bar_h, axis=(2,3) )
 
-hnn = _h_nn_h()
-plt.plot( sigma, hnn[:,0] )
-plt.plot( tau, hnn[3,:] )
+def _tau_nn_h():
+    # sigma1,tau1, sigma2,tau2 are axis=0,1,2,3 respectively.
+    ns = sigma.shape[0]
+    nt = tau.shape[0]
+    sigma2 = np.copy(sigma).reshape( (1,1,ns,1) )
+    tau2 = np.copy(tau).reshape( (1,1,1,nt) )
+    rho_h2 = sampling.rho_h.reshape( (1,1,ns,nt) )
+    sigma1 = sigma.reshape( (ns,1,1,1) )
+    tau1 = tau.reshape( (1,nt,1,1) )
+    r_bar_h = sampling.r_bar_h().reshape( (ns,nt,1,1) )
+    return np.sum( r(sigma1,tau1,sigma2,tau2)*rho_h2*tau2 / r_bar_h, axis=(2,3) )
+
+
+sigma_nn = _sigma_nn_h()
+tau_nn = _tau_nn_h()
+#plt.plot( sigma, hnn[:,3] )
+#plt.plot( tau, hnn[1,:] )
+np.sum( sigma_nn * sampling.r_bar_h(), axis=1)
+
+
+# In[ ]:
+
+
+# compare with simulations
+
+result_dir = "/Users/murase/work/oacis/public/Result_development/5c1afd04d12ac67b76ff6fbe/5c1b114ed12ac6433d77c469/5c1b64a7d12ac6433c976e62/"
+
+def _compare_Pk(result_dir):
+    path = result_dir + "degree_distribution_ave.dat"
+    d = np.loadtxt(path)
+    plt.yscale("log")
+    plt.ylim(1.0e-4,1.0e-1)
+    plt.xlim(0,140)
+    plt.xlabel(r"$k$")
+    plt.ylabel(r"$P(k)$")
+    plt.xticks(np.arange(0, 160, step=40))
+    plt.plot(d[:,0], d[:,1]/50000, '.', label='simulation')
+    plt.plot( sampling.k, sampling.P_k(), label='theory')
+    plt.legend(loc="lower center")
+    plt.savefig("vec_pk_sim.pdf")
+    
+_compare_Pk(result_dir)
+
+
+# In[ ]:
+
+
+def _compare_knn(result_dir):
+    path = result_dir + "neighbor_degree_correlation_ave.dat"
+    d = np.loadtxt(path)
+    plt.xlabel(r"$k$")
+    plt.ylabel(r"$k_{nn}(k)$")
+    kappa_mean = np.sum(kappa * P_kappa)
+    kappa_nn = np.full(kappa.shape, kappa_mean + 1)
+    k_nn = sampling.k_nn_k(kappa_nn)
+    plt.xscale("log")
+    plt.xlim(7.0e0, 1.5e2)
+    plt.ylim(68,75)
+    plt.yticks(np.arange(68,75,step=2) )
+    plt.plot(d[:,0], d[:,1], '.')
+    plt.plot(sampling.k, k_nn)
+    plt.savefig("vec_knn_sim.pdf")
+
+_compare_knn(result_dir)
+
+
+# In[ ]:
+
+
+import matplotlib
+
+def _compare_ck(result_dir):
+    path = result_dir + "cc_degree_correlation_ave.dat"
+    d = np.loadtxt(path)
+    fig1, ax1 = plt.subplots()
+    ax1.set_xlabel(r"$k$")
+    ax1.set_ylabel(r"$c(k) \times 10^3$")
+    ax1.set_yscale("log")
+    ax1.set_xscale("log")
+    ax1.set_xlim(7.0e0, 1.5e2)
+    ax1.set_yticks([1.2,1.4,1.6,1.8])
+    ax1.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
+    ax1.set_ylim(1.2, 1.8)
+    ax1.plot(d[:,0], d[:,1]*1e3, '.')
+    c_o_kappa = np.full( kappa.shape, 0.003 )
+    plt.plot( sampling.k[2:], sampling.c_k(c_o_kappa)[2:]*1e3)
+    plt.savefig("vec_ck_sim.pdf")
+
+_compare_ck(result_dir)
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+def _sigma_nn_h():
+    # sigma1,tau1, sigma2,tau2 are axis=0,1,2,3 respectively.
+    ns = sigma.shape[0]
+    nt = tau.shape[0]
+    sigma2 = np.copy(sigma).reshape( (1,1,ns,1) )
+    tau2 = np.copy(tau).reshape( (1,1,1,nt) )
+    rho_h2 = sampling.rho_h.reshape( (1,1,ns,nt) )
+    sigma1 = sigma.reshape( (ns,1,1,1) )
+    tau1 = tau.reshape( (1,nt,1,1) )
+    r_bar_h = sampling.r_bar_h().reshape( (ns,nt,1,1) )
+    return np.sum( r(sigma1,tau1,sigma2,tau2)*rho_h2*sigma2 / r_bar_h, axis=(2,3) )
+
+def _tau_nn_h():
+    # sigma1,tau1, sigma2,tau2 are axis=0,1,2,3 respectively.
+    ns = sigma.shape[0]
+    nt = tau.shape[0]
+    sigma2 = np.copy(sigma).reshape( (1,1,ns,1) )
+    tau2 = np.copy(tau).reshape( (1,1,1,nt) )
+    rho_h2 = sampling.rho_h.reshape( (1,1,ns,nt) )
+    sigma1 = sigma.reshape( (ns,1,1,1) )
+    tau1 = tau.reshape( (1,nt,1,1) )
+    r_bar_h = sampling.r_bar_h().reshape( (ns,nt,1,1) )
+    return np.sum( r(sigma1,tau1,sigma2,tau2)*rho_h2*tau2 / r_bar_h, axis=(2,3) )
+
+
+sigma_nn = _sigma_nn_h()
+tau_nn = _tau_nn_h()
+normed_r_bar_h = sampling.r_bar_h() / np.sum( sampling.r_bar_h(), axis=(0,1) )
+#plt.plot( sigma, hnn[:,3] )
+#plt.plot( tau, hnn[1,:] )
+sigma_nn_theor = np.sum( sigma_nn * normed_r_bar_h, axis=1) / np.sum( normed_r_bar_h, axis=1 )
+plt.plot(sigma, sigma_nn_theor)
+
+tau_nn_theor = np.sum( tau_nn * normed_r_bar_h, axis=0) / np.sum(normed_r_bar_h, axis=0)
+plt.plot(tau,tau_nn_theor)
+
+
+# In[ ]:
+
+
+def _compare_hnn(result_dir, x, sigma_nn_theor, tau_nn_theor):
+    path = result_dir + "fnn.dat"
+    d = np.loadtxt(path)
+    plt.xlabel(r"$\sigma,\tau$")
+    plt.ylabel(r"$\sigma_{nn}(\sigma)$, $\tau_{nn}(\tau)$")
+    plt.ylim(1.4,2.0)
+    plt.plot(d[:,0],d[:,1], 'o', label=r"$\sigma$",zorder=10, color='#1f77b4')
+    plt.plot(x, sigma_nn_theor, '--', color='#1f77b4')
+    plt.plot(d[:,0],d[:,2], 's', label=r"$\tau$",zorder=20, color='#2ca02c')
+    plt.plot(x, tau_nn_theor, '--', color='#2ca02c')
+    plt.yticks( np.arange(1.4,2.1,step=0.2) )
+    plt.legend()
+    plt.savefig("vec_hnn_sim.pdf")
+
+fnn_result_dir = "/Users/murase/work/oacis/public/Result_development/5c1afd04d12ac67b76ff6fbe/5c1b114ed12ac6433d77c469/5c1b64a7d12ac6433c976e63/"    
+_compare_hnn(fnn_result_dir, sigma, sigma_nn_theor, tau_nn_theor)
 
 
 # In[ ]:
