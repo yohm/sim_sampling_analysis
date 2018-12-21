@@ -1,0 +1,8 @@
+{
+  "NumNodes": 1000,
+  "NumEdges": 24811,
+  "AverageDegree": 49.622,
+  "Assortativity": 0.008554,
+  "ArgMax_Pk": 50,
+  "ClusteringCoefficient": 0.049665,
+  "PCC_C_k": 0.00191745}
