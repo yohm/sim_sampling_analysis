@@ -46,6 +46,18 @@ analyzer_params2 = {
   
 }
 
+analyzer_params3 = {
+  name: "ensemble_avg",
+  command: "#{repo_dir}/network_analysis/ensemble/run_averaging.sh '_input/*' .",
+  support_input_json: true,
+  type: "on_parameter_set",
+  auto_run: "yes",
+  print_version_command: "cd #{repo_dir} && git describe --always",
+  description: "ensemble averaging",
+  executable_on: [ localhost ],
+  auto_run_submitted_to: localhost
+}
+
 if Simulator.where(name: sim_params[:name]).exists?
 	puts "simulator #{sim_params[:name]} already exists" 
   sim = Simulator.find_by_name( sim_params[:name] )
@@ -55,9 +67,13 @@ if Simulator.where(name: sim_params[:name]).exists?
   unless sim.analyzers.where(name: analyzer_params2[:name]).exists?
     sim.analyzers.create!(analyzer_params2)
   end
+  unless sim.analyzers.where(name: analyzer_params3[:name]).exists?
+    sim.analyzers.create!(analyzer_params3)
+  end
 else
 	sim = Simulator.create!(sim_params)
   sim.analyzers.create!(analyzer_params)
   sim.analyzers.create!(analyzer_params2)
+  sim.analyzers.create!(analyzer_params3)
 end
 
