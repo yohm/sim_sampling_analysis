@@ -1,0 +1,17 @@
+{
+  "NumNodes": 9986,
+  "NumEdges": 54242,
+  "AverageDegree": 10.8636,
+  "Assortativity": 0.076362,
+  "ArgMax_Pk": 6,
+  "ClusteringCoefficient": 0.655518,
+  "PCC_C_k": -0.692997,
+  "AverageEdgeWeight": 260.492,
+  "ArgMax_Ps": 6,
+  "PCC_s_k": 0.682286,
+  "AverageOverlap": 0.364831,
+  "PCC_O_w": 0.337869,
+  "Fc_Ascending": 0.52625,
+  "Fc_Descending": 0.918984,
+  "Delta_Fc": 0.392734
+}
