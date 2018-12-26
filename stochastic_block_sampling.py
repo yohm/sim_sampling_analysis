@@ -66,7 +66,6 @@ plt.legend()
 # p_o(h,h') =
 # \sum_{I}\rho_{I}(h) [p_{\rm in}N_{C}\rho_{I}(h') + p_{\rm out}(N-N_{C})\sum_{I'\neq I}\rho_{I'}(h')/(C-1) ]
 #  / C[p_{\rm in}N_{C}+p_{\rm out}(N-N_{C}])}
-
 def _p_o_hh(h, C=100, N_in=100, p_in=0.5, N_out=9900, p_out=50.0/9900.0, rho_I=rho_I):
     # axis-0,1,2 are hi,hj,I
     nh = h.shape[0]
@@ -83,32 +82,35 @@ def _p_o_hh(h, C=100, N_in=100, p_in=0.5, N_out=9900, p_out=50.0/9900.0, rho_I=r
     numer = np.sum( rho_I_hi * (numer_1 + numer_2), axis=2 )
     return numer / denom
 
-def _p_o_hi_given_hj(h, C=100, N_in=100, p_in=0.5, N_out=9900, p_out=50.0/9900.0, rho_I=rho_I):
+# p_o(h'|h)
+#   h,h' are axis-0,1
+#   = p_o(h,h') / rho(h)
+def _p_o_hprime_given_h(h, C=100, N_in=100, p_in=0.5, N_out=9900, p_out=50.0/9900.0, rho_I=rho_I):
     # axis-0,1 are hi,hj
     nh = h.shape[0]
     p_o_hh = _p_o_hh(h, C=100, N_in=100, p_in=0.5, N_out=9900, p_out=50.0/9900.0, rho_I=rho_I)
-    rho_hi = np.sum( rho_I, axis=0 ).reshape( (1,nh) ) / C
+    rho_hi = np.sum( rho_I, axis=0 ).reshape( (nh,1) ) / C
     return p_o_hh / rho_hi
 
 # _p_o_hh(h)
-p_o_hi_given_hj = _p_o_hi_given_hj(h)
+p_o_hprime_given_h = _p_o_hprime_given_h(h)
 plt.xlabel(r"$h$")
-plt.ylabel(r"$p_o(h|h')$")
-plt.plot( h, p_o_hi_given_hj[:,0], label=r"$h'=0$" )
-plt.plot( h, p_o_hi_given_hj[:,-1], label=r"$h'=1$")
+plt.ylabel(r"$p_o(h'|h)$")
+plt.plot( h, p_o_hprime_given_h[0,:], label=r"$h=0$" )
+plt.plot( h, p_o_hprime_given_h[-1,:], label=r"$h=1$")
 plt.legend()
 
-np.sum( p_o_hi_given_hj[:,-1] ) * (h[1]-h[0])
+np.sum( p_o_hprime_given_h[-1,:] ) * (h[1]-h[0])
 
 
 # In[ ]:
 
 
-def _hnn_o(h, p_o_hi_given_hj=p_o_hi_given_hj):
-    hi = h.reshape( (h.shape[0],1) )
-    return np.sum( hi* p_o_hi_given_hj, axis=0) * (h[1]-h[0])
+def _hnn_o(h, p_o_hprime_given_h=p_o_hprime_given_h):
+    hp = h.reshape( (1,h.shape[0]) )
+    return np.sum( hp * p_o_hprime_given_h, axis=1) * (h[1]-h[0])
 
-hnn_o = _hnn_o(h, p_o_hi_given_hj)
+hnn_o = _hnn_o(h, p_o_hprime_given_h)
 plt.xlabel(r"$h$")
 plt.ylabel(r"$h_{nn,o}(h')$")
 plt.plot(h, hnn_o)
@@ -178,13 +180,14 @@ r(1.0,3.0)
 
 class NodalSampling:
     
-    def __init__(self, h, kappa, rho_h, P_kappa, r):
+    def __init__(self, h, kappa, rho_h, p_o_hprime_given_h, P_kappa, r):
         self.h = h
         self.nh = h.shape[0]
         self.dh = self.h[1]-self.h[0]
         self.kappa = kappa
         self.nkappa = kappa.shape[0]
         self.rho_h = rho_h
+        self.p_o_hprime_given_h = p_o_hprime_given_h   # p_o(h|h')
         assert( rho_h.shape == h.shape )
         self.P_kappa = P_kappa
         assert( P_kappa.shape == kappa.shape )
@@ -203,18 +206,19 @@ class NodalSampling:
         }
         
     def r_bar_h(self):
-        # sum_{h'} rho(h') r(h,h')
+        # sum_{h'} p_o(h'|h) r(h,h')
+        # axis-0,1 are h, h'
         if self.results["r_bar_h"] is not None:
             return self.results["r_bar_h"]
         h_prime = np.copy(self.h).reshape([1,self.nh])
         h_ = self.h.reshape( [self.nh,1] )
         rhh = self.r(h_, h_prime)
-        dr = rhh*rho.reshape([1,self.nh])*self.dh
+        dr = rhh*self.p_o_hprime_given_h*self.dh
         self.results["r_bar_h"] = np.sum(dr,axis=1)
         return self.results["r_bar_h"]
     
     def r_bar(self):
-        # sum_{h,h'} rho(h') rho(h) r(h,h')
+        # sum_{h,h'} \bar{r}(h) rho(h)
         if self.results["r_bar"] is not None:
             return self.results["r_bar"]
         y = self.r_bar_h() * self.rho_h * self.dh
@@ -239,17 +243,14 @@ class NodalSampling:
         _g = g * self.rho_h.reshape([1,self.nh,1]) * self.P_kappa.reshape([1,1,self.nkappa])
         self.results["P_k"] = np.sum(_g, axis=(1,2)) * self.dh
         return self.results["P_k"]
-    
+
     def r_nn_h(self):
         # h, h_prime are axis=0,1, respectively.
         if self.results["r_nn_h"] is not None:
             return self.results["r_nn_h"]
-        h_prime = np.copy(self.h).reshape([1,self.nh])
-        rho_h_prime = self.rho_h.reshape([1,self.nh])
         r_bar_h_prime = self.r_bar_h().reshape([1,self.nh])
-        r_bar_h = self.r_bar_h().reshape( [self.nh,1] )
-        h = self.h.reshape( [self.nh,1] )
-        x = r( h, h_prime ) * rho_h_prime * r_bar_h_prime / r_bar_h
+        p_hprime_given_h = self._p_hprime_given_h()
+        x = p_hprime_given_h * r_bar_h_prime
         self.results["r_nn_h"] = np.sum( x, axis=1 ) * self.dh
         return self.results["r_nn_h"]
     
@@ -262,15 +263,19 @@ class NodalSampling:
     
     def _p_hprime_given_h(self):
         # h,h' are axis-0,1
-        # p(h'|h) = r(h',h) rho(h') / r_bar(h)
+        # p(h'|h) = r(h',h) p_o(h'|h) / r_bar(h)
         if self.results["p_hprime_given_h"] is not None:
             return self.results["p_hprime_given_h"]
         h_ = self.h.reshape( (self.nh,1) )
         h_prime = self.h.reshape( (1,self.nh) )
-        rho_hprime = self.rho_h.reshape( (1,self.nh) )
         rbar_h = self.r_bar_h().reshape( (self.nh,1) )
-        self.results["p_hprime_given_h"] = r(h_, h_prime) * rho_hprime / rbar_h
+        self.results["p_hprime_given_h"] = r(h_, h_prime) * self.p_o_hprime_given_h / rbar_h
         return self.results["p_hprime_given_h"]
+    
+    def h_nn_h(self):
+        # h, h_prime are axis=0,1, respectively.
+        h_prime = self.h.reshape( (1,self.h.shape[0]) )
+        return np.sum( self._p_hprime_given_h() * h_prime, axis=1 ) * self.dh
     
     def c_h(self):
         # h, h', h'' are axis-0,1,2, respectively
@@ -310,9 +315,155 @@ class NodalSampling:
         return self.results["g_star"]
 
         
-sampling = NodalSampling(h=h, kappa=kappa, rho_h=rho, P_kappa=P_kappa, r=r)
+sampling = NodalSampling(h=h, kappa=kappa, rho_h=rho, p_o_hprime_given_h=p_o_hprime_given_h, P_kappa=P_kappa, r=r)
+
+
+# In[ ]:
+
+
 plt.xlabel(r"$h$")
 plt.ylabel(r"$\bar{r}(h)$")
 plt.plot(h, sampling.r_bar_h())
 print(sampling.r_bar())
+
+
+# In[ ]:
+
+
+g = sampling.g()
+print(g.shape)
+plt.xlabel(r"$k$")
+plt.ylabel(r"$g(k|h,\kappa)_{h=0.6,\kappa=100}$")
+plt.plot(sampling.k, g[:,300,100])
+
+
+# In[ ]:
+
+
+plt.yscale("log")
+plt.ylim(1.0e-4,1.0e-1)
+plt.xlim(0,50)
+plt.xlabel(r"$k$")
+plt.ylabel(r"$P(k)$")
+plt.plot( sampling.k, sampling.P_k() )
+
+
+# In[ ]:
+
+
+plt.xlabel(r"$h$")
+plt.ylabel(r"$r(h), r_{nn}(h)$")
+plt.plot(h, sampling.r_nn_h(), label=r"$r_{nn}(h)$")
+plt.plot(h, sampling.r_bar_h(), label=r"$r(h)$")
+plt.legend()
+
+
+# In[ ]:
+
+
+kappa_mean = np.sum(kappa * P_kappa)
+kappa_nn = np.full(kappa.shape, kappa_mean + 1)
+k_nn = sampling.k_nn_k(kappa_nn)
+plt.xscale("log")
+plt.xlabel(r"$k$")
+plt.ylabel(r"$k_{nn}(k)$")
+plt.xlim(1.0e0, 1.0e2)
+plt.plot(sampling.k, k_nn)
+
+
+# In[ ]:
+
+
+result_dir = "/Users/murase/work/oacis/public/Result_development/5c219460d12ac664bee47e80/5c21a9fdd12ac6433d77c542/5c22ed05d12ac6433c9771aa/"
+
+def _compare_Pk(sampling, result_dir):
+    f = result_dir + "degree_distribution_ave.dat"
+    dat = np.loadtxt(f)
+    plt.xlim(0,60)
+    plt.ylim(1.0e-4,1.0e-1)
+    plt.yscale("log")
+    plt.plot( sampling.k, sampling.P_k() )
+    plt.plot( dat[:,0], dat[:,1]/10000 )
+
+_compare_Pk(sampling, result_dir)
+
+
+# In[ ]:
+
+
+def _compare_knn(sampling, result_dir):
+    f = result_dir + "neighbor_degree_correlation_ave.dat"
+    dat = np.loadtxt(f)
+    plt.xscale("log")
+    plt.xlabel(r"$k$")
+    plt.ylabel(r"$k_{nn}(k)$")
+    plt.xlim(1.0e0, 1.0e2)
+    kappa_mean = np.sum(kappa * P_kappa)
+    # kappa_nn = np.full(kappa.shape, kappa_mean + 1)
+    kappa_nn = np.full(kappa.shape, 100.25)
+    plt.plot( sampling.k, sampling.k_nn_k(kappa_nn) )
+    plt.plot( dat[:,0], dat[:,1] )
+    
+_compare_knn(sampling, result_dir)
+
+
+# In[ ]:
+
+
+_fnn_analysis_result_dir = "/Users/murase/work/oacis/public/Result_development/5c219460d12ac664bee47e80/5c21a9fdd12ac6433d77c542/5c22ed05d12ac6433c9771a9/"
+
+def _compare_hnn(sampling, r_dir):
+    f = r_dir + "fnn.dat"
+    dat = np.loadtxt(f)
+    plt.xlabel(r"$h$")
+    plt.ylabel(r"$h_{nn}(h)$")
+    plt.plot(sampling.h, sampling.h_nn_h(), label="theory")
+    plt.plot(dat[:,0], dat[:,1], label="simulation" )
+    plt.legend()
+    
+_compare_hnn(sampling, _fnn_analysis_result_dir)
+
+
+# In[ ]:
+
+
+plt.xlabel(r"$h$")
+plt.ylabel(r"$c_{h}$")
+plt.plot(sampling.h, sampling.c_h())
+
+
+# In[ ]:
+
+
+# c_o_kappa is well approximated by -0.00082*x+0.211
+c_o_kappa = kappa * (-0.00082) + np.full( kappa.shape, 0.211 )
+plt.yscale("log")
+plt.xscale("log")
+plt.xlabel(r"$k$")
+plt.ylabel(r"$c(k)$")
+plt.plot(sampling.k, sampling.c_k(c_o_kappa))
+
+
+# In[ ]:
+
+
+def _compare_ck(sampling, r_dir):
+    f = r_dir + "cc_degree_correlation_ave.dat"
+    dat = np.loadtxt(f)
+    plt.xscale("log")
+    plt.xlabel(r"$k$")
+    plt.ylabel(r"$c(k)$")
+    plt.xlim(1.0e0, 1.0e2)
+    # c_o_kappa = np.full(kappa.shape, 0.15)
+    c_o_kappa = kappa * (-0.00082) + np.full( kappa.shape, 0.211 )
+    plt.plot( sampling.k, sampling.c_k(c_o_kappa) )
+    plt.plot( dat[:,0], dat[:,1] )
+    
+_compare_ck(sampling, result_dir)
+
+
+# In[ ]:
+
+
+
 

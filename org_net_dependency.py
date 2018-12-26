@@ -156,12 +156,9 @@ class NodalSampling:
         # h, h_prime are axis=0,1, respectively.
         if self.results["r_nn_h"] is not None:
             return self.results["r_nn_h"]
-        h_prime = np.copy(self.h).reshape([1,self.nh])
-        rho_h_prime = self.rho_h.reshape([1,self.nh])
         r_bar_h_prime = self.r_bar_h().reshape([1,self.nh])
-        r_bar_h = self.r_bar_h().reshape( [self.nh,1] )
-        h = self.h.reshape( [self.nh,1] )
-        x = r( h, h_prime ) * rho_h_prime * r_bar_h_prime / r_bar_h
+        p_hprime_given_h = self._p_hprime_given_h()
+        x = p_hprime_given_h * r_bar_h_prime
         self.results["r_nn_h"] = np.sum( x, axis=1 ) * self.dh
         return self.results["r_nn_h"]
     
@@ -413,6 +410,12 @@ plt.xlim(1.0e0, 1.0e2)
 plt.ylim(0,8)
 plt.plot(sampling.k, kls)
 plt.savefig("kl_divergence.pdf")
+
+
+# In[ ]:
+
+
+
 
 
 # In[ ]:
