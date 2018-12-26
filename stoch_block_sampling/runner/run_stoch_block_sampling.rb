@@ -34,3 +34,13 @@ $stderr.puts command
 system(command)
 raise "Analyzer failed" unless $?.to_i == 0
 
+# execute analyzer
+Dir.mkdir("org")
+Dir.chdir("org") {
+  edge_file = "../org.edg"
+  command = "#{analyzer} #{edge_file}"
+  $stderr.puts "Running analyzer : #{DateTime.now}"
+  $stderr.puts command
+  system(command)
+  raise "Analyzer failed" unless $?.to_i == 0
+}

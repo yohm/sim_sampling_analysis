@@ -52,6 +52,7 @@ analyzer_params3 = {
   support_input_json: true,
   type: "on_parameter_set",
   auto_run: "yes",
+  files_to_copy: "*.dat",
   print_version_command: "cd #{repo_dir} && git describe --always",
   description: "ensemble averaging",
   executable_on: [ localhost ],

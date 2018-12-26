@@ -21,11 +21,9 @@ int main(int argc, char** argv) {
   std::mt19937 rnd(seed);
   Sampling net(&rnd);
   net.GenerateStochBlock(N, N_C, p_in, p_out, &rnd);
-  /*
   std::ofstream org_out("org.edg");
   net.Print(org_out);
   org_out.flush(); org_out.close();
-   */
   Network* sampled = net.StochBlockSampling(N_C, alpha, h0_min, h0_max, beta);
   std::ofstream fout("sampled.edg");
   sampled->Print( fout );
