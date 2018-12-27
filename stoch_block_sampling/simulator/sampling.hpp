@@ -11,7 +11,7 @@ class Sampling : public Network {
 public:
   Sampling(std::mt19937* rnd) : m_rnd(rnd) {}
   Network* PowerMeanSampling( double f0, double alpha, double beta);
-  Network* StochBlockSampling(size_t N_C, double alpha, double h0_min, double h0_max, double beta);
+  Network* StochBlockSampling(size_t N_C, double alpha, double h0_min, double h0_max, double beta, bool reshuffle=false);
 private:
   std::mt19937* const m_rnd;
   double Rand01() {
@@ -23,6 +23,7 @@ private:
     return weibull(*m_rnd);
   }
   void AssignPreference( std::vector<double>&pref, double f0, double alpha );
+  void Shuffle(std::vector<double>& vh);
   void AssignCorrelatedH( std::vector<double>&vh, double alpha, double h0_min, double h0_max, size_t N_C);
   double PowerMean( double fi, double fj, double sum_exp );
 

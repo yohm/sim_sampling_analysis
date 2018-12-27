@@ -52,9 +52,12 @@ Network* Sampling::PowerMeanSampling(double f0, double alpha, double beta) {
   return net;
 }
 
-Network *Sampling::StochBlockSampling(size_t N_C, double alpha, double h0_min, double h0_max, double beta) {
+Network *Sampling::StochBlockSampling(size_t N_C, double alpha, double h0_min, double h0_max, double beta, bool reshuffle) {
   std::vector<double> vh( m_nodes.size() );
   AssignCorrelatedH( vh, alpha, h0_min, h0_max, N_C );
+  if( reshuffle ) {
+    Shuffle(vh);
+  }
 
   std::vector<size_t> sampledDegrees( m_nodes.size(), 0 );
 
@@ -120,6 +123,16 @@ void Sampling::AssignPreference( std::vector<double>& pref, double f0, double al
       x = RandWeibull(alpha, f0);
     }
     pref[i] = x;
+  }
+}
+
+void Sampling::Shuffle(std::vector<double> &vh) {
+  const size_t N = vh.size();
+  for( size_t i=0; i<N; i++) {
+    double temp = vh[i];
+    size_t j = static_cast<size_t>( Rand01()*N );
+    vh[i] = vh[j];
+    vh[j] = temp;
   }
 }
 

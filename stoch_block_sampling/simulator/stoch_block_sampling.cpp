@@ -3,8 +3,8 @@
 #include "sampling.hpp"
 
 int main(int argc, char** argv) {
-  if(argc != 10) {
-    std::cerr << "Usage : ./stoch_block_sampling.out N N_C p_in p_out alpha h0_min h0_max beta _seed" << std::endl;
+  if(argc != 11) {
+    std::cerr << "Usage : ./stoch_block_sampling.out N N_C p_in p_out alpha h0_min h0_max beta reshuffle _seed" << std::endl;
     return 1;
   }
 
@@ -16,7 +16,8 @@ int main(int argc, char** argv) {
   double h0_min = std::stod(argv[6]);
   double h0_max = std::stod(argv[7]);
   double beta = std::stod(argv[8]);
-  uint64_t seed = std::stoull(argv[9]);
+  long reshuffle = std::stol(argv[9]);  // 0: without reshuffle, 1: with reshuffle
+  uint64_t seed = std::stoull(argv[10]);
 
   std::mt19937 rnd(seed);
   Sampling net(&rnd);
@@ -24,7 +25,7 @@ int main(int argc, char** argv) {
   std::ofstream org_out("org.edg");
   net.Print(org_out);
   org_out.flush(); org_out.close();
-  Network* sampled = net.StochBlockSampling(N_C, alpha, h0_min, h0_max, beta);
+  Network* sampled = net.StochBlockSampling(N_C, alpha, h0_min, h0_max, beta, reshuffle==1);
   std::ofstream fout("sampled.edg");
   sampled->Print( fout );
   fout.flush(); fout.close();

@@ -15,7 +15,7 @@ params = JSON.load(File.open(ARGV[0]))
 simulator = File.expand_path( File.join( File.dirname(__FILE__), "../simulator/stoch_block_sampling.out") )
 
 $stderr.puts "Running simulation"
-keys = %w(N N_C p_in p_out alpha h0_min h0_max beta _seed)
+keys = %w(N N_C p_in p_out alpha h0_min h0_max beta reshuffle _seed)
 args = keys.map {|key| params[key] }
 command = "#{simulator} #{args.join(' ')}"
 $stderr.puts "Running simulator : #{DateTime.now}"
@@ -35,7 +35,7 @@ system(command)
 raise "Analyzer failed" unless $?.to_i == 0
 
 # execute analyzer
-Dir.mkdir("org")
+FileUtils.mkdir_p("org")
 Dir.chdir("org") {
   edge_file = "../org.edg"
   command = "#{analyzer} #{edge_file}"

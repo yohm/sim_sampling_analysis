@@ -16,6 +16,7 @@ sim_params = {
     {key: "h0_min", type: "Float", default: 0.1, description: "minimum of h0"},
     {key: "h0_max", type: "Float", default: 0.5, description: "maximum of h0"},
     {key: "beta", type: "Float", default: -10.0, description: "exponent for sampling prob"},
+    {key: "reshuffle", type: "Integer", default: 0, description: "1:reshuffle h"},
   ],
   description: "Network sampling model by correlated-h with stochastic block model",
   executable_on: [ localhost ]
