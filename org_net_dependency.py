@@ -148,7 +148,7 @@ class NodalSampling:
     def P_k(self):
         if self.results["P_k"] is not None:
             return self.results["P_k"]
-        _g = g * self.rho_h.reshape([1,self.nh,1]) * self.P_kappa.reshape([1,1,self.nkappa])
+        _g = self.g() * self.rho_h.reshape([1,self.nh,1]) * self.P_kappa.reshape([1,1,self.nkappa])
         self.results["P_k"] = np.sum(_g, axis=(1,2)) * self.dh
         return self.results["P_k"]
     
@@ -203,7 +203,7 @@ class NodalSampling:
         _rho_h = self.rho_h.reshape( (1,self.nh,1) )
         _p_kappa = self.P_kappa.reshape( (1,1,self.nkappa) )
         _c_h = self.c_h().reshape( (1,self.nh,1) )
-        return 1.0 / self.P_k() * np.sum( g * _rho_h * _p_kappa * _c_h * _c_o_kappa, axis=(1,2) ) * self.dh
+        return 1.0 / self.P_k() * np.sum( self.g() * _rho_h * _p_kappa * _c_h * _c_o_kappa, axis=(1,2) ) * self.dh
 
     def g_star(self):
         # g*(h,kappa|k) = g(k|h,kappa)rho(h)P_o(kappa) / P(k)
@@ -229,11 +229,9 @@ print(sampling.r_bar())
 # In[ ]:
 
 
-g = sampling.g()
-print(g.shape)
 plt.xlabel(r"$k$")
 plt.ylabel(r"$g(k|h,\kappa)_{h=0.6,\kappa=150}$")
-plt.plot(sampling.k, g[:,300,150])
+plt.plot(sampling.k, sampling.g()[:,300,150])
 
 
 # In[ ]:
