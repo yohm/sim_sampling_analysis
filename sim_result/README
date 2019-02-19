@@ -1,0 +1,32 @@
+## fig2
+
+Simulation results for "NetworkSamplingFixedF0" simulator.
+Paramters: N=5000, k=150.0, f0=0.3, alpha=0.8, beta=-100.0
+Averaged over 200 runs.
+
+- http://localhost:3000/analyses/5c0a13c6d12ac6a7d393f002
+- http://localhost:3000/analyses/5c188527d12ac6433d77c434
+
+## fig4
+
+Simulation results for "NetworkVecAttrSampling" simulator.
+Parameters: N=50000, k=150.0, q_sigma=4, q_tau=4, c=2.0
+Averaged over 1000 runs.
+
+- http://localhost:3000/analyses/5c1b64a7d12ac6433c976e62
+- http://localhost:3000/analyses/5c1b64a7d12ac6433c976e63
+
+## fig5
+
+Simulation results for "NetworkStochBlockSampling" simulator.
+Parameters: N=10000, N_C=100, p_in=0.5, p_out=0.0050505, alpha=1.0, h0_min=0.01, h0_max=1.0, beta=-10.0, reshuffle=0
+Parameters: N=10000, N_C=100, p_in=0.5, p_out=0.0050505, alpha=1.0, h0_min=0.01, h0_max=1.0, beta=-10.0, reshuffle=1
+Averaged over 200 runs.
+
+- CO
+  - http://localhost:3000/analyses/5c2425e4d12ac60a582930e3
+  - http://localhost:3000/analyses/5c2425e4d12ac60a582930e2
+- UC
+  - http://localhost:3000/analyses/5c242bd0d12ac60a58293279
+  - http://localhost:3000/analyses/5c242bd0d12ac60a58293278
+
