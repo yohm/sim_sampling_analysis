@@ -1,3 +1,6 @@
 [submodule "ensemble_averaging"]
 	path = ensemble_averaging
 	url = git@github.com:yohm/ensemble_averaging.git
+[submodule "sim_power_mean_sampling"]
+	path = sim_power_mean_sampling
+	url = https://github.com/yohm/sim_power_mean_sampling.git
