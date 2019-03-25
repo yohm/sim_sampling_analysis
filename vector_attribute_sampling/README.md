@@ -7,7 +7,7 @@
 First, an Erdos-Renyi random network of size `N` and average degree `k` is constructed.
 
 Then, a tuple of two integers, $(\sigma_{i}, \tau_{i})$, is assigned randomly to each node.
-sigma and tau are independently drawn from the uniform distribution $[0,q_{\sigma}]$ and $[0,q_{\tau}]$, respectively.
+sigma and tau are independently drawn from the uniform distribution $[0,q_{\sigma}-1]$ and $[0,q_{\tau}-1]$, respectively.
 
 After affinity values are assigned to each node, then sample the links with the probability dependent on the affinity of the nodes in both ends.
 See section 3.B of the [paper](https://arxiv.org/abs/1902.04707) for details. 
