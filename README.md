@@ -24,3 +24,4 @@ $ pipenv shell
 $ jupyter notebook
 ```
 
+In addition to the jupyter notebooks, C++ codes for simulation are also included in this repository.
