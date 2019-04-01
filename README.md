@@ -1,4 +1,4 @@
-# Code for "Sampling network by nodal attributes"
+# Code for "Sampling networks by nodal attributes"
 
 This repository contains a set of codes for the following paper.
 
